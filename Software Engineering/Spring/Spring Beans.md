@@ -4,7 +4,7 @@ tags:
   - frameworks
   - software-engineering
 ---
-Beans are object instances that are added to the [[Spring Context]]. There are multiple ways to add beans to the application context:
+Beans are object instances (of any kind - e.g String, Integer, or objects of classes custom defined) that are added to the [[Spring Context]]. There are multiple ways to add beans to the application context:
 1. Using the ```@Bean``` annotation
 2. Using stereotype annotations
 3. Programmatically
@@ -27,7 +27,7 @@ Method m = ProjectConfig.class.getDeclaredMethod("parrot");
 boolean present = m.isAnnotationPresent(Bean.class);
 ```
 
-## Using the Annotation
+## Adding a Single Bean
 
 Below is the normal way to initialize a class:
 
@@ -79,3 +79,20 @@ public class Main {
     }  
 }
 ```
+
+4. Validate that the object instance was added to the context
+	1. If the bean of that class does not exist in the context, an exception will be thrown
+```java
+public static void main(String[] args) {  
+    var context = new AnnotationConfigApplicationContext(ProjectConfig.class);
+    
+	// Get the bean of class Parrot  
+    Parrot p = context.getBean(Parrot.class);
+  
+    System.out.println(p.getName());
+    // Output: Koko
+}
+```
+
+## Adding Multiple Beans of Same Type
+- [ ] Fill out section

@@ -54,13 +54,13 @@ public class UserController {
 
 ### Service Locator
 Code asks a central registry for dependencies. Less favored in modern software engineering
-- [ ] 🔼 Finish Service Locator
+- [ ] Fill out section
 ### Event-Driven / Observer Pattern
 Code doesn't call the event loop, the event loop calls the code
-- [ ] 🔼 Finish Event-Driven / Observer Pattern
+- [ ] Fill out section
 ### Template Method Pattern
 Framework defines the algorithm, code fills in the steps
-- [ ] 🔼 Finish Template Method Pattern
+- [ ] Fill out section
 
 ## IoC in Real Frameworks
 
