@@ -29,3 +29,7 @@ Within each category, there will be a note specifically for addressing the leade
 | System Resiliency    | How do I lead incident response? How do I build a blameless culture?                                         |
 | AI Engineering       | How do I evaluate ethical implications? How do I guide teams through experimentation?                        |
 
+# Reading List
+- [ ] Introducing Maven: A Build Tool for Today's Java Developers by Balaji Varanasi
+- [ ] Spring Start Here
+- [ ] Dependency Injection

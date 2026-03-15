@@ -13,7 +13,10 @@ tags:
   - design-principles
   - design-patterns
 ---
+# Database of Notes
 ![[Software Engineering.base]]
-## 
-Leadership Lens
-{{leadership-questions}}
+
+# Tasks
+```tasks
+path includes software engineering
+```

@@ -1,9 +1,12 @@
 ---
 tags:
-  - spring
   - frameworks
+  - spring-projects
+  - spring
 ---
-A toolkit that makes using Spring ecosystem fast, automatic, and production-ready. 
+A toolkit that makes using Spring ecosystem fast, automatic, and production-ready. Introduces the concept of *convention over configuration*. Instead of requiring you to setup the framework yourself, Spring Boot offers a default configuration that can be customized. 
+
+The result is that in general, less code is written because conventions are followed and each application is similar to others. Easier to start with a default configuration and only change whats different between use cases and deviate from the convention.
 ## Auto‑Configuration
 Spring Boot looks at your classpath and automatically configures Spring components.
 Example:
