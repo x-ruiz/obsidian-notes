@@ -13,7 +13,7 @@ tags:
   - design-principles
   - design-patterns
 ---
-![[Categories.base]]
+![[Software Engineering.base]]
 ## 
 Leadership Lens
 {{leadership-questions}}
