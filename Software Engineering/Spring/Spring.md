@@ -4,6 +4,7 @@ tags:
   - frameworks
   - spring-frameworks
   - spring-projects
+  - software-engineering
 ---
 Spring is often called a “framework,” but in reality it is an ecosystem of frameworks and projects. At the center is the Spring Framework, a set of core modules that define the programming model.
 Surrounding it is a large family of Spring Projects, each solving specialized problems such as data access, security, cloud integration, messaging, and application bootstrap. This layered architecture is what gives Spring its flexibility and power.
@@ -15,6 +16,7 @@ Both the Spring Framework and all Spring Projects are fully open source under th
 - Spring Projects = independent, specialized extensions built on top
 - Spring Boot = one of the Spring Projects, providing auto‑configuration and application bootstrap
 - The ecosystem is designed so the core provides the programming model, while the projects provide domain‑specific capabilities
+- Spring is designed to be modular, only installing dependencies of functionality you need, instead of the whole ecosystem
 
 This structure is why Spring remains one of the most flexible and widely used ecosystems in modern backend development.
 
