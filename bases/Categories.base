@@ -1,0 +1,9 @@
+views:
+  - type: table
+    name: Table
+  - type: table
+    name: Software Engineering
+    filters:
+      and:
+        - file.inFolder("Software Engineering")
+        - file.name != "Software Engineering"
