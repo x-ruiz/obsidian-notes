@@ -18,7 +18,7 @@ var name = "Name"
 - Equivalent to explicit type when type is obvious
 
 #### .class
-Gves the Class object for a type. Frameworks use this when they need metadata about a class rather than an instance.
+Gives the Class object for a type. Frameworks use this when they need metadata about a class rather than an instance.
 ```java
 ProjectConfig.class
 ```

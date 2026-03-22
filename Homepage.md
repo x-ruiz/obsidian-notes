@@ -16,7 +16,7 @@ Within each category, notes will be collected by focus area listed below. Use th
 | **Information Security** | - Secure Coding & Vulnerability Mitigation<br>- Authentication & Authorization<br>- Encryption & Secrets Management<br>- Threat Modeling & Penetration Testing<br>- Compliance & Auditing |
 | **Software Engineering** | - Design Principles<br>- Design Patterns<br>- Frameworks & Languages<br>- Testing Strategies<br>- Build & CI/CD                                                                           |
 | **System Resiliency**    | - Monitoring & Observability<br>- Fault Tolerance<br>- Chaos Engineering<br>- Incident Response & Post-Mortems<br>- Disaster Recovery & Backups                                           |
-| **AI Engineering**       | - ML Pipelines<br>- Model Training & Evaluation<br>- Deployment & Serving<br>- MLOps & Versioning<br>- Ethical AI & Bias Detection                                                        |
+| **AI Engineering**       | - ML Pipelines<br>- Model Training & Evaluation<br>- Agent Deployment & Development<br>- MLOps & Versioning<br>- Ethical AI & Bias Detection                                              |
 ## Leadership Lens
 Within each category, there will be a note specifically for addressing the leadership lens questions below to ensure leadership strategies are being actively thought about.
 

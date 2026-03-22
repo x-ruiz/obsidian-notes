@@ -7,7 +7,7 @@ tags:
   - software-engineering
 ---
 Spring is often called a “framework,” but in reality it is an ecosystem of frameworks and projects. At the center is the Spring Framework, a set of core modules that define the programming model.
-Surrounding it is a large family of Spring Projects, each solving specialized problems such as data access, security, cloud integration, messaging, and application bootstrap. This layered architecture is what gives Spring its flexibility and power.
+Surrounding it is a large family of Spring Projects, each solving specialized problems such as data access, security, cloud integration, messaging, and application bootstrap. This layered architecture is what gives Spring its flexibility and power. Spring as a whole implements the principle of [[Inversion of Control]]
 
 ![[spring-ecosystem.excalidraw.md]]
 Both the Spring Framework and all Spring Projects are fully open source under the Apache 2.0 license. The distinction between “framework modules” and “projects” is architectural and organizational, not licensing.

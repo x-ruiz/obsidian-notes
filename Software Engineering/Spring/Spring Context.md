@@ -10,6 +10,11 @@ Place in memory of the application in which all object instances that the framew
 
 There are various context implementations, however in most cases, the ```AnnotationConfigApplicationContext``` class is used (annotation driven with the ```@Bean``` annotation). 
 
+## AnnotationConfigApplicationContext
+
+## SpringApplication
+
 # Configuration Classes
 
 Classes that define various Spring-related configurations for the project to be added to the context. Can be used to add new object instances ([[Spring Beans]]) to the Spring application context (see [[Spring Beans#@Bean Annotation]]).
+
