@@ -1,10 +1,7 @@
 ---
 tags:
-  - creational-patterns
-  - design-patterns
-  - software-engineering
+  - software-engineering/design-patterns/creational-patterns
 ---
-
 Defines an interface for creating an object, but allows subclasses to decide which class to instantiate. It defers instantiation to subclasses via **inheritance and polymorphism** (virtual constructors).
 ### Key Components
 - **Product:** The interface for the object created.

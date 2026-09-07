@@ -120,7 +120,7 @@ public class ProjectConfig {
 }
 ```
 
-When adding multiple beans of the same type to the [[Spring Context]] you can no longer retrieve them by [[Java#.class]]: Spring will throw an exception telling you to be precise (if no `@Primary` annotation is present).
+When adding multiple beans of the same type to the [[Spring Context]] you can no longer retrieve them by [[Miscellaneous#.class]]: Spring will throw an exception telling you to be precise (if no `@Primary` annotation is present).
 
 2. Retrieve beans by instance type (name of bean registered)
 ```java

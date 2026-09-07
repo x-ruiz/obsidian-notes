@@ -1,7 +1,6 @@
 ---
 tags:
-  - java
-  - languages
+  - software-engineering/languages/java
 ---
 The Java programming language allows you to define a class within another class. Such a class is called a _nested class_ and is illustrated here:
 

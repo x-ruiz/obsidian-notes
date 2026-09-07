@@ -1,7 +1,6 @@
 ---
 tags:
-  - software-engineering
-  - languages
+  - software-engineering/languages/java
 ---
 #### var
 Lets Java infer the local variable type from the initializer and is useful when the type is obvious and long. **Does not make Java dynamically typed like Javascript.**

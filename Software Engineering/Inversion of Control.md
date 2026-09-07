@@ -1,7 +1,6 @@
 ---
 tags:
-  - design-principles
-  - software-engineering
+  - software-engineering/design-principles
 aliases:
   - IoC
 ---

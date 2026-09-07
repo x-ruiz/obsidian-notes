@@ -6,12 +6,12 @@ aliases:
 last-studied: 2026-03-15
 tags:
   - software-engineering
-  - frameworks
-  - languages
-  - testing-strategies
-  - cicd
-  - design-principles
-  - design-patterns
+  - software-engineering/frameworks
+  - software-engineering/languages
+  - software-engineering/testing-strategies
+  - software-engineering/cicd
+  - software-engineering/design-principles
+  - software-engineering/design-patterns
 ---
 # Database of Notes
 ![[Software Engineering.base]]
