@@ -199,7 +199,7 @@ This scales perfectly for your Mastery Framework—link focus areas directly fro
 
 **ai**: **Mastery Framework**
 
-This is the **best name** for your current "[[Homepage]]" note—it's already the H1 heading (`# Mastery Framework`), perfectly captures the core content (6-category radar chart, Focus Areas, Leadership Lens), and positions it as the **graph center** hub. All category links (`[[Cloud Infrastructure]]`, etc.) naturally radiate from it.
+This is the **best name** for your current "[[README]]" note—it's already the H1 heading (`# Mastery Framework`), perfectly captures the core content (6-category radar chart, Focus Areas, Leadership Lens), and positions it as the **graph center** hub. All category links (`[[Cloud Infrastructure]]`, etc.) naturally radiate from it.
 
 ### Quick Rename (1s):
 1. Right-click the tab > "Rename" > `Mastery Framework.md`.
@@ -218,7 +218,7 @@ Want me to rename it and fix links? Just say! 🚀
 
 **ai**: **Engineering Hub**
 
-This is the **ideal name** for your current "[[Homepage]]" note as the graph's central node—neutral, descriptive of a branching knowledge structure (categories → focus areas → notes), and fits your platform engineering growth without tying to "Mastery Framework" specifically. It evokes a dashboard where Cloud Infra, Data Processing, etc., radiate outward.
+This is the **ideal name** for your current "[[README]]" note as the graph's central node—neutral, descriptive of a branching knowledge structure (categories → focus areas → notes), and fits your platform engineering growth without tying to "Mastery Framework" specifically. It evokes a dashboard where Cloud Infra, Data Processing, etc., radiate outward.
 
 ### Quick Rename (1s):
 1. Right-click the tab > "Rename file" > `Engineering Hub.md`.
