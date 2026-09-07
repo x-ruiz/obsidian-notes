@@ -392,7 +392,7 @@ focus-areas:
 ```
 Add `leadership-questions: ["How do I...", "How do I..."]` for `{{leadership-questions}}`.
 
-Your note is already set up great—static bullets make it bulletproof. Test by clicking a link (e.g., [[Design Patterns]])—instant sub-note! 🚀
+Your note is already set up great—static bullets make it bulletproof. Test by clicking a link (e.g., [[Creational Patterns]])—instant sub-note! 🚀
 
 Need me to generate this for other categories or a Dataview query example? Just say!
 [Timestamp: 2026/03/14 19:49:47]
