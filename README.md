@@ -3,7 +3,13 @@ This Mastery Framework outlines my structured path to becoming a better engineer
 
 Below is my current evaluation of my skills in each categories as of **Mar 14 2026**
 
-![[Pasted image 20260314185317.png]]
+```mermaid
+xychart-beta
+    title "Competency Profile (Scale 0 - 10)"
+    x-axis ["Cloud Infra", "Data Proc", "InfoSec", "Software Eng", "System Res", "AI Eng"]
+    y-axis "Rating (0 - 10)" 0 --> 10
+    bar [5, 3, 1, 2, 0, 0]
+```
 <div class="flourish-embed flourish-radar" data-src="visualisation/28059856"><script src="https://public.flourish.studio/resources/embed.js"></script><noscript><img src="https://public.flourish.studio/visualisation/28059856/thumbnail" width="100%" alt="radar visualization" /></noscript></div>
 
 ## Focus Areas
