@@ -77,89 +77,16 @@ Autonomous agents span a spectrum of complexity rooted in classical control theo
 
 ## Execution Paradigms: ReAct vs. ReWOO
 
-Multi-step problem solving relies on different structural paradigms for planning and tool execution.
+Multi-step problem solving relies on different structural paradigms for planning and tool execution. For comprehensive architectures, implementation engines, and execution traces, see their dedicated reference notes:
 
-### 1. The ReAct Pattern (Reason + Act)
+- **[[ReAct Pattern]]**: Dynamic interleaving of reasoning traces ("thought") and tool invocations ("action/observation") in a continuous feedback loop.
+- **[[ReWOO Pattern]]**: Decoupled execution paradigm generating a full tool dependency DAG upfront, executing tools concurrently, and synthesizing outputs in a single final pass.
 
-**ReAct** interleaves reasoning with external tool invocations dynamically at every iteration:
+### Architectural Summary: ReAct vs. ReWOO
 
-```mermaid
-flowchart TD
-    Query["User Query"] --> Reason["Reason and Plan (LLM)"]
-    Memory[("Memory (Traces & History)")] <--> Reason
-    Reason -->|"Select tool & arguments"| Act["Act (Invoke External Tool)"]
-    Act -->|"Return output or error"| Observe["Observe Tool Result"]
-    Observe --> Check{"Goal Satisfied?"}
-    Check -->|"No: revise plan"| Reason
-    Check -->|"Yes"| Final["Final Grounded Answer"]
-```
-
-#### Multi-Step Execution Example
-
-Consider a compound query: *"How many 2 oz sunscreen bottles are needed for an upcoming Florida vacation using remaining vacation days?"*
-
-1. **Memory Lookup:** Retrieve remaining vacation days from prior conversation history (e.g., 10 days).
-2. **Weather API Tool:** Query next month's Florida forecast to estimate average daily sun exposure hours.
-3. **Web Search Tool:** Retrieve public health recommendations for sunscreen dosage per hour of sun exposure.
-4. **Calculator Tool:** Compute total required volume and divide by 2 oz per bottle, then synthesize the final answer.
-
-#### Reference Implementation Sketch
-
-```python
-from typing import Any, Callable
-
-
-def run_react_agent(
-    query: str,
-    llm: Any,
-    tools: dict[str, Callable[..., Any]],
-    memory: list[dict[str, str]],
-    max_steps: int = 8,
-) -> str:
-    """Bounded ReAct loop: Reason -> Act -> Observe -> Iterate."""
-    trace = [*memory, {"role": "user", "content": query}]
-
-    for _ in range(max_steps):
-        decision = llm.plan_next_step(trace, available_tools=list(tools.keys()))
-
-        if decision.is_final:
-            memory.append({"role": "assistant", "content": decision.answer})
-            return decision.answer
-
-        tool_fn = tools.get(decision.tool_name)
-        if tool_fn is None:
-            observation = f"Error: unknown tool '{decision.tool_name}'"
-        else:
-            try:
-                observation = str(tool_fn(**decision.tool_args))
-            except Exception as exc:
-                observation = f"ToolError: {exc}"
-
-        trace.append({"role": "thought", "content": decision.thought})
-        trace.append({"role": "observation", "content": observation})
-
-    raise RuntimeError(f"Agent exceeded max_steps={max_steps} without converging")
-```
-
-### 2. Reasoning Without Observation (ReWOO)
-
-**ReWOO** formulates a complete multi-step tool execution graph upfront, fills variable dependencies, invokes tools in parallel or batched pipelines, and synthesizes the final result in a single pass.
-
-```mermaid
-flowchart TD
-    UserQuery["User Request"] --> Planner["Planner (Upfront Task Decomposition)"]
-    Planner --> PlanDAG["Execution Blueprint (Tool Call DAG)"]
-    PlanDAG -->|"Pre-execution inspection"| Gate{"Human Approval Gate"}
-    Gate -->|"Approved"| Worker["Worker (Batch / Concurrent Tool Invocation)"]
-    Worker -->|"Aggregated Tool Observations"| Solver["Solver (Synthesis Model)"]
-    Solver --> FinalOutput["Final Response"]
-```
-
-### Architectural Comparison: ReAct vs. ReWOO
-
-| Dimension | ReAct (Reason + Act) | ReWOO (Reason Without Observation) |
+| Dimension | [[ReAct Pattern]] (Reason + Act) | [[ReWOO Pattern]] (Reason Without Observation) |
 | :--- | :--- | :--- |
-| **Execution Flow** | Dynamic step-by-step loop (sequential) | Upfront planning DAG + batched/parallel execution |
+| **Execution Flow** | Dynamic step-by-step loop (sequential) | Upfront planning DAG + batched / concurrent tool execution |
 | **Token Consumption** | High (full trace context re-ingested per step) | Low (decouples reasoning prompt from tool execution traces) |
 | **Latency Profile** | Variable and high (sum of all sequential round-trips) | Bounded and lower (parallelized external I/O) |
 | **Failure Blast Radius** | Intermediate tool errors re-prompt model to backtrack | Upfront plan can fail if early tool output invalidates downstream schema |

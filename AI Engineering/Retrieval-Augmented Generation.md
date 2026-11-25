@@ -71,6 +71,23 @@ def answer_with_rag(retriever, llm, user_query: str) -> str:
 
 ---
 
+## Classic (Pipeline) RAG vs. Agentic (Tool-Calling) RAG
+
+> [!IMPORTANT]
+> **In both patterns, retrieved content is injected into the LLM's context window before final generation.** An LLM cannot inspect external files or databases on its own—the difference is **who decides when and what to retrieve**: deterministic application code before the LLM runs, or the LLM itself via tool calls.
+
+| Pattern | Who Triggers Retrieval | Execution Flow | Strengths & Trade-Offs | Senior Note |
+| :--- | :--- | :--- | :--- | :--- |
+| **Classic (Pipeline) RAG** | Application code (before calling the LLM) | `Query → Code searches store → Inject chunks + query into prompt → LLM answers (1 call)` | Fast, predictable latency and fixed token cost; however, retrieves blindly even on trivial turns and cannot follow up if initial search misses context. | Ideal for high-throughput, low-latency Q&A over a well-indexed single corpus. |
+| **Agentic (Tool-Calling) RAG** | The LLM itself (via retrieval tools) | `Query → LLM invokes search/read tool → Tool returns passages into context → (Optional follow-up reads) → LLM answers` | Skips retrieval when unnecessary, refines queries, and can traverse references (e.g., following `[[Wikilinks]]`); adds 1–2 extra LLM turns and variable latency. | Best for complex, multi-hop questions, personal knowledge vaults, or multi-source troubleshooting. |
+
+### Retriever Agnosticism & Common Misconceptions
+- **RAG Does Not Require a Vector Database:** Retrieval is a pattern, not a storage engine. Full-text/BM25 search (e.g., SQLite FTS5), metadata/tag filtering, and link traversal are valid retrievers and often outperform dense vectors on exact technical terms (`@Bean`, `varint`, error codes) or smaller corpora (< 200 documents). Add embeddings (Hybrid Search) once semantic recall gaps justify the indexing overhead.
+- **Not Context Stuffing:** Pre-loading an entire corpus into every prompt skips the retrieval step altogether, diluting attention and burning tokens regardless of the query.
+- **Not [[Fine-Tuning]]:** Baking knowledge into model weights offline updates parametric memory rather than retrieving external evidence at inference time.
+
+---
+
 ## Standalone LLM vs. RAG
 
 | Dimension | Standalone LLM (Generation Only) | RAG (Retrieval + Generation) | Senior Note |
