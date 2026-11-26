@@ -17,14 +17,52 @@ Modern AI systems are composite software architectures that layer **probabilisti
 Production [[AI Agents]] combines foundational model/safety layers with four orthogonal context mechanisms (**Agent Skills**, **MCP**, **RAG**, and **Memory**) rather than relying on static model weights or monolithic prompts:
 
 ```mermaid
-flowchart TD
-    User["User Request / Alert Trigger"] --> Policy["System Prompt & Guardrails (Runtime Policy)"]
-    Policy --> Host["AI Agent Runtime (Trained LLM + MCP Host)"]
-    Host -->|"Progressive disclosure"| Skill["Agent Skills (Procedures & Escalation Rules)"]
-    Host <-->|"Standardized tool calls"| MCP["Model Context Protocol (MCP Servers & Live Tools)"]
-    Host <-->|"Semantic search"| RAG["RAG Pipeline (Curated Docs & Vector Store)"]
-    Host <-->|"Recall prior fixes / write back"| Memory["Agent Memory (Experiential State)"]
-    MCP <-->|"Read / Write actions"| Systems["External Systems (SQL/NoSQL, Logs, Code, APIs)"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph Ingress["1. Ingress & Runtime Policy Boundary"]
+        User(["User Request / Alert\nUntrusted Trigger"])
+        Policy["System Prompt & Guardrails\nRuntime Policy Engine\nPrompt-Injection Defense"]
+    end
+
+    subgraph Runtime["2. Core Agent Runtime"]
+        Host["AI Agent Runtime\nTrained LLM + MCP Host\nBounded max_steps Loop"]
+    end
+
+    subgraph ContextPlane["3. Four Orthogonal Context Mechanisms"]
+        Skill["Agent Skills\nPackaged SOPs & Scripts\nProgressive Disclosure"]
+        MCP["Model Context Protocol\nMCP Servers & Live Tools\nDeterministic AuthZ"]
+        RAG[("RAG Pipeline\nCurated Docs & Vector Store\nRead-Only Grounding")]
+        Memory[("Agent Memory\nExperiential State Store\nVerified Write-Back")]
+    end
+
+    subgraph Backends["4. Live External Systems"]
+        Systems[("External Systems\nSQL / NoSQL · Logs · Code · APIs\nLeast-Privilege Scope")]
+    end
+
+    User ==>|"Prompt / Alert trigger"| Policy
+    Policy ==>|"Policy-scoped context"| Host
+    Host -.->|"Progressive disclosure\nProcedures & escalation"| Skill
+    Host <-->|"Standardized tool calls\nTyped JSON-RPC"| MCP
+    Host <-->|"Semantic search\nTop-K passages"| RAG
+    Host <-->|"Recall prior fixes\nGated write-back"| Memory
+    MCP <-->|"Authorized Read / Write\nAudited execution"| Systems
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Host core
+    class Skill,MCP service
+    class RAG,Memory store
+    class User,Systems external
+    class Policy guard
+
+    style Ingress fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style Runtime fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style ContextPlane fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Backends fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
 ```
 
 | Layer | Engineering Role | Mental Model | Primary Problem Solved |

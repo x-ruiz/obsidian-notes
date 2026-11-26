@@ -20,24 +20,43 @@ The **Standard I/O (`stdio`) Transport** is an inter-process communication (IPC)
 Under `stdio`, the host application manages the entire lifecycle of the server process. Communication relies entirely on OS-level file descriptors without binding network interfaces or opening TCP sockets.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    subgraph Host["Host Application Process (Client)"]
-        ClientRuntime["MCP Client Session"]
+    subgraph Host["1. Host Application Process (Parent)"]
+        ClientRuntime["MCP Client Session\nSubprocess Lifecycle Owner\nJSON-RPC Framing Parser"]
+        HostLog[("Host Diagnostic Logs\nUnparsed Telemetry Sink\nIsolated from JSON-RPC")]
     end
 
-    subgraph OS["Operating System Pipe Layer"]
-        InPipe["stdin (fd 0)"]
-        OutPipe["stdout (fd 1)"]
-        ErrPipe["stderr (fd 2)"]
+    subgraph OS["2. OS Kernel Pipe Layer (Zero TCP / Ports)"]
+        InPipe(["stdin · fd 0\nClient-to-Server Pipe"])
+        OutPipe(["stdout · fd 1\nStrict JSON-RPC Only"])
+        ErrPipe(["stderr · fd 2\nDiagnostic Log Stream"])
     end
 
-    subgraph Server["Child Process (MCP Server)"]
-        ServerRuntime["FastMCP / Server Loop"]
+    subgraph Server["3. Child Process (MCP Server)"]
+        ServerRuntime["FastMCP / Server Loop\nsys.stdin/stdout.buffer\nSIGPIPE / SIGHUP bound"]
     end
 
-    ClientRuntime -->|"Write JSON-RPC requests\n(newline delimited)"| InPipe --> ServerRuntime
-    ServerRuntime -->|"Write JSON-RPC responses\n(newline delimited)"| OutPipe --> ClientRuntime
-    ServerRuntime -->|"Diagnostic logs only\n(Human readable)"| ErrPipe --> HostLog["Host Diagnostic Logs"]
+    ClientRuntime ==>|"Write JSON-RPC requests\n(newline delimited)"| InPipe
+    InPipe ==>|"Read frame"| ServerRuntime
+    ServerRuntime ==>|"Write JSON-RPC responses\n(newline delimited)"| OutPipe
+    OutPipe ==>|"Parse frame"| ClientRuntime
+    ServerRuntime -.->|"Diagnostic logs only\n(Human readable)"| ErrPipe
+    ErrPipe -.->|"Redirect stderr"| HostLog
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class ClientRuntime core
+    class ServerRuntime service
+    class InPipe,OutPipe guard
+    class ErrPipe,HostLog async
+
+    style Host fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style OS fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Server fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### Critical Stream Isolation Rules

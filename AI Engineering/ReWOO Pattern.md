@@ -19,17 +19,59 @@ created: 2026-11-24
 ReWOO structures agentic task execution into three distinct, specialized components: the **Planner**, the **Worker**, and the **Solver**.
 
 ```mermaid
-flowchart TD
-    Query["User Query"] --> Planner["1. Planner (Task Decomposition)"]
-    Planner --> Blueprint["Execution Blueprint (Tool Call DAG with #E1, #E2 Variables)"]
-    Blueprint --> Gate{"Optional Approval Gate"}
-    Gate -->|"Approved"| Worker["2. Worker (Concurrent Tool Execution Engine)"]
-    Worker -->|"Execute Tool 1 (#E1)"| Tool1["API / Database 1"]
-    Worker -->|"Execute Tool 2 (#E2)"| Tool2["API / Database 2"]
-    Tool1 --> EvidenceStore[("Aggregated Evidence Store")]
-    Tool2 --> EvidenceStore
-    EvidenceStore --> Solver["3. Solver (Final Synthesis Model)"]
-    Solver --> FinalResponse["Final Grounded Response"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph Ingress["1. Request Ingress"]
+        Query(["User Query\nMulti-Step Request"])
+    end
+
+    subgraph PlannerPhase["2. Planner Phase (Upfront Decomposition)"]
+        Planner["1. Planner LLM\nTask Decomposition\nZero Live Observations"]
+        Blueprint["Execution Blueprint\nTool Call DAG\n#E1, #E2 Placeholders"]
+        Gate{"Optional Approval Gate\nStatic DAG Validation\n& Human Sign-Off"}
+    end
+
+    subgraph WorkerPhase["3. Worker Phase (Concurrent Execution)"]
+        Worker["2. Execution Worker\nDeterministic DAG Engine\nVariable Substitution"]
+        Tool1["API / Database 1\nConcurrent External I/O\nResolves #E1"]
+        Tool2["API / Database 2\nConcurrent External I/O\nResolves #E2"]
+        EvidenceStore[("Aggregated Evidence Store\nKey-Value Map\n#E1, #E2 -> Tool Outputs")]
+    end
+
+    subgraph SolverPhase["4. Solver Phase (Single-Pass Synthesis)"]
+        Solver["3. Solver LLM\nFinal Synthesis Model\nSingle Forward Pass"]
+        FinalResponse(["Final Grounded Response\nBounded Latency & Cost"])
+    end
+
+    Query ==>|"Task prompt"| Planner
+    Planner ==>|"Emit full tool DAG"| Blueprint
+    Blueprint -->|"Pre-execution inspection"| Gate
+    Gate ==>|"Approved blueprint"| Worker
+    Worker ==>|"Execute Tool 1 (#E1)"| Tool1
+    Worker ==>|"Execute Tool 2 (#E2)"| Tool2
+    Tool1 -->|"Persist #E1 output"| EvidenceStore
+    Tool2 -->|"Persist #E2 output"| EvidenceStore
+    EvidenceStore ==>|"Key-value evidence\n+ Blueprint"| Solver
+    Solver ==>|"Synthesized answer"| FinalResponse
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Planner,Solver core
+    class Blueprint,Worker service
+    class EvidenceStore store
+    class Query,FinalResponse external
+    class Tool1,Tool2 async
+    class Gate guard
+
+    style Ingress fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style PlannerPhase fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style WorkerPhase fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style SolverPhase fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### 1. The Planner
@@ -162,11 +204,41 @@ Because ReWOO formulates the entire tool call graph *before* execution begins, i
 2. **Deterministic DAG Validation:** Static analyzers can inspect the blueprint for prohibited tools, circular dependencies, or rate-limit violations before incurring runtime costs.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    Plan["Blueprint Generated"] --> PolicyCheck{"Policy Engine / Static Checker"}
-    PolicyCheck -->|"Violates Policy"| Reject["Abort & Alert"]
-    PolicyCheck -->|"Approved"| HumanGate{"Human Approval"}
-    HumanGate -->|"Authorized"| WorkerRun["Worker Executes Tools"]
+    subgraph PlanInput["1. Generated Plan"]
+        Plan["Blueprint Generated\nImmutable Tool DAG\n#E1..#En Arguments"]
+    end
+
+    subgraph Governance["2. Pre-Execution Governance Gates"]
+        PolicyCheck{"Policy Engine\nStatic DAG Analyzer\nTools · Cycles · Quotas"}
+        HumanGate{"Human Approval Gate\nMutating Action Review\nExact Parameters"}
+    end
+
+    subgraph Disposition["3. Execution Disposition"]
+        Reject(["Abort & Alert\nZero Side Effects\nAudit Logged"])
+        WorkerRun["Worker Executes Tools\nAuthorized DAG Dispatch\nConcurrent I/O"]
+    end
+
+    Plan ==>|"Submit blueprint"| PolicyCheck
+    PolicyCheck -.->|"Violates policy\nCycle or banned tool"| Reject
+    PolicyCheck -->|"Static checks pass"| HumanGate
+    HumanGate -.->|"Denied by operator"| Reject
+    HumanGate ==>|"Authorized\nSigned approval"| WorkerRun
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class WorkerRun core
+    class Plan service
+    class Reject async
+    class PolicyCheck,HumanGate guard
+
+    style PlanInput fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Governance fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Disposition fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ---

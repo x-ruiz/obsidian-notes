@@ -46,22 +46,63 @@ Consider a retail checkout workflow where a Checkout service must inform Invento
 In a production EDA topology, heterogeneous **event producers** (web applications, mobile clients, microservices, and IoT/edge devices) publish immutable records into a central **event backbone** (such as [[Apache Kafka]]). Downstream workloads attach independently to the same event logs without coordinating with producers or one another.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    Web["Web Application"] --> Backbone["Event Backbone (Append-Only Event Logs)"]
-    Mobile["Mobile Application"] --> Backbone
-    IoT["IoT / Edge Devices"] --> Backbone
+    subgraph Producers["1. Event Producers (Ingress)"]
+        Web(["Web Application\nBrowser · HTTPS"])
+        Mobile(["Mobile Application\niOS / Android Clients"])
+        IoT(["IoT / Edge Devices\nContinuous Telemetry"])
+    end
 
-    Backbone --> FaaS["Serverless / FaaS (Ephemeral Action)"]
-    FaaS -. "Completion event" .-> Backbone
+    subgraph EventBackbone["2. Event Backbone (Durable Log)"]
+        Backbone[("Event Backbone\nAppend-Only Event Logs\nPartitioned · Replayable")]
+        SchemaDLQ["Schema Registry & DLQ\nCompat Enforcement\nPoison-Pill Isolation"]
+    end
 
-    Backbone --> LocalStore["Domain Service (Localized Data Store)"]
-    LocalStore -. "Derived state stream" .-> Backbone
+    subgraph Consumers["3. Decoupled Downstream Consumers"]
+        FaaS["Serverless / FaaS\nEphemeral Compute Pod\nOn-Demand Action"]
+        LocalStore["Domain Service\nLocalized SQL / NoSQL\nIdempotent Consumer"]
+        Streams["Stream Processing\nKafka Streams Engine\nStateful Joins & Rules"]
+        Microservices["Pub/Sub Microservices\nPluggable Containers\nLive Offset or Replay"]
+        Lake[("Data Lake\nRaw & Curated Archive\nImmutable History")]
+        AI["AI / Analytics Workloads\nBatch Features & Training\nAuthorized Read Path"]
+    end
 
-    Backbone --> Lake["Data Lake (Raw & Transformed Archive)"]
-    Lake --> AI["AI / Analytics Workloads"]
+    Web ==>|"Immutable fact\nCheckoutCompleted"| Backbone
+    Mobile ==>|"Async publish\nClient events"| Backbone
+    IoT ==>|"Telemetry stream\nDevice triggers"| Backbone
 
-    Backbone --> Streams["Stream Processing (Kafka Streams)"]
-    Backbone --> Microservices["Pluggable Pub/Sub Microservices (Live or Replay)"]
+    Backbone -.->|"Invalid schema\nRoute poison pill"| SchemaDLQ
+
+    Backbone -.->|"Trigger event\nScale-to-zero"| FaaS
+    FaaS -.->|"Completion event\nAsync feedback"| Backbone
+
+    Backbone ==>|"Domain stream\nAt-least-once"| LocalStore
+    LocalStore -.->|"Derived state stream\ninventory-updated"| Backbone
+
+    Backbone ==>|"Key-partitioned\nIn-flight stream"| Streams
+    Backbone ==>|"Pub/Sub fan-out\nLive or replay"| Microservices
+
+    Backbone -->|"Durable sink\nRaw & transformed"| Lake
+    Lake -->|"Historical corpus\nBatch & ML reads"| AI
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Backbone core
+    class LocalStore,Streams,Microservices service
+    class Lake store
+    class Web,Mobile,IoT external
+    class FaaS,AI async
+    class SchemaDLQ guard
+
+    style Producers fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style EventBackbone fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Consumers fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ---

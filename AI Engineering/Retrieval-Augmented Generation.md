@@ -25,13 +25,45 @@ Standalone generative models answer user prompts purely from static knowledge co
 RAG inserts a retrieval step between the user query and LLM generation, backed by an external **content store**—either **open** (e.g., live web search) or **closed** (e.g., internal policy collections, enterprise document repositories, structured [[SQL]] databases, or document/vector [[NoSQL]] stores).
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    User["User Query"] --> Retriever["Retriever"]
-    Retriever -->|"Query for relevant context"| Store["Content Store (Open or Closed)"]
-    Store -->|"Primary source passages"| Prompt["Augmented Prompt (Instruction + Context + Query)"]
-    User --> Prompt
-    Prompt --> LLM["Generative Model (LLM)"]
-    LLM --> Response["Grounded Response + Source Evidence"]
+    subgraph ClientTier["1. Client Interface"]
+        User(["User Query\nNatural Language Input"])
+        Response(["Grounded Response\nAnswer + Source Evidence\nOr Explicit Abstention"])
+    end
+
+    subgraph RetrievalTier["2. Retrieval & Prompt Grounding"]
+        Retriever["Retriever Engine\nBM25 / Hybrid / Vector\nTop-K Ranking"]
+        Store[("Content Store\nOpen Web or Closed Corpus\nSQL · NoSQL · Vector DB")]
+        Prompt["3-Part Augmented Prompt\nGrounding Instruction\n+ Context + User Query"]
+    end
+
+    subgraph GenerationTier["3. Inference Engine"]
+        LLM["Generative Model · LLM\nContext-Constrained Pass\nCite or Abstain"]
+    end
+
+    User ==>|"1. Raw query"| Retriever
+    User -->|"3. Original question"| Prompt
+    Retriever ==>|"2. Query for context\nMetadata filters"| Store
+    Store ==>|"Primary source passages\nWith source IDs"| Prompt
+    Prompt ==>|"Grounded prompt\nStrict evidence boundary"| LLM
+    LLM ==>|"Synthesized answer\nVerifiable citations"| Response
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class LLM core
+    class Retriever service
+    class Store store
+    class User,Response external
+    class Prompt guard
+
+    style ClientTier fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style RetrievalTier fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style GenerationTier fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### Three-Part Augmented Prompt

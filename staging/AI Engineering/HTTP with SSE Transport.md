@@ -20,29 +20,32 @@ The **HTTP with Server-Sent Events (SSE) Transport** is a networked communicatio
 Unlike single-socket duplex protocols (such as WebSockets) or local process pipes (`[[Standard IO Transport]]`), the HTTP + SSE transport splits bidirectional RPC traffic into two independent HTTP connections.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "actorBkg": "#18181B", "actorBorder": "#7C3AED", "actorTextColor": "#F4F4F5", "actorLineColor": "#52525B", "signalColor": "#A855F7", "signalTextColor": "#E4E4E7", "labelBoxBkgColor": "#2E1065", "labelBoxBorderColor": "#A855F7", "labelTextColor": "#F5F3FF", "loopTextColor": "#D8B4FE", "noteBkgColor": "#1E1B2E", "noteBorderColor": "#6D28D9", "noteTextColor": "#EDE9FE", "activationBkgColor": "#4C1D95", "activationBorderColor": "#C084FC", "sequenceNumberColor": "#FAF5FF", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}}}%%
 sequenceDiagram
     autonumber
-    actor Client as MCP Host Client
-    actor Proxy as Reverse Proxy / Load Balancer
-    actor Server as MCP SSE Server
+    participant Client as MCP Host Client
+    participant Proxy as Reverse Proxy / LB
+    participant Server as MCP SSE Server
 
-    rect rgb(240, 248, 255)
-        Note over Client,Server: Step 1: Open Server-to-Client SSE Channel
+    rect rgb(22, 20, 31)
+        Note over Client,Server: Step 1: Open Persistent Server-to-Client SSE Channel
         Client->>Proxy: GET /sse (Accept: text/event-stream)
-        Proxy->>Server: Forward GET /sse
-        Server-->>Client: event: endpoint\ndata: /messages?sessionId=sess_87a1c
+        Proxy->>+Server: Forward GET /sse (Pins session affinity)
+        Server-->>Client: event: endpoint · data: /messages?sessionId=sess_87a1c
     end
 
-    rect rgb(255, 250, 240)
-        Note over Client,Server: Step 2: Client-to-Server RPC Invocations
-        Client->>Server: POST /messages?sessionId=sess_87a1c (tools/call)
+    rect rgb(30, 27, 46)
+        Note over Client,Server: Step 2: Client-to-Server RPC Invocations (Sticky Routing Required)
+        Client->>Proxy: POST /messages?sessionId=sess_87a1c (tools/call)
+        Proxy->>Server: Route to pinned instance (sessionId=sess_87a1c)
         Server-->>Client: HTTP 202 Accepted (Empty body)
-        Server-->>Client: (via open SSE stream) data: {"jsonrpc": "2.0", "result": {...}}
+        Server-->>Client: SSE stream · data: {"jsonrpc":"2.0","result":{...}}
     end
 
-    rect rgb(255, 240, 245)
-        Note over Client,Server: Step 3: Server Notifications
-        Server--xClient: (via open SSE stream) data: notifications/message
+    rect rgb(15, 15, 20)
+        Note over Client,Server: Step 3: Async Server Notifications (Keep-Alive Sensitive)
+        Server--xClient: SSE stream · data: notifications/message
+        deactivate Server
     end
 ```
 

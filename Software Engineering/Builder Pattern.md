@@ -96,37 +96,49 @@ In order to solve this, normal objects use setters, including the name of the fi
 The builder pattern addresses this by combining the power of setters to non final fields within the builder class, and doing a one time set of all the [[Design Patterns#Product Class|product]] class fields during class instantiation (cannot set final fields with setters as the fields must be populated before object is created, and setters are only available after an object is created).
 
 ```mermaid
-flowchart TD
-    subgraph Dilemma["The Object Creation Dilemma"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph Dilemma["1. The Object Creation Dilemma (Trade-Off Trap)"]
         direction LR
-        A["<b>Approach 1: Telescoping Constructor</b><br/><code>new Table('name', null)</code>"]
-        B["<b>Approach 2: JavaBeans / Setters</b><br/><code>table.setName('name')</code>"]
+        Telescoping["Approach 1: Telescoping Constructor\nnew Table · positional null args\nPositional parameter binding"]
+        JavaBeans["Approach 2: JavaBeans / Setters\ntable.setName · post-construction\nMutable state exposure"]
 
-        A -->|Pros| A_pro["100% Immutable (final fields)<br/>Thread-safe by default"]
-        A -->|Cons| A_con["Positional 'null' blindness<br/>Prone to argument swapping"]
+        TelescopingPro["Pro: 100% Immutable\nfinal fields · Thread-safe\nAtomic initialization"]
+        TelescopingCon["Con: Positional Blindness\nNull padding · Arg-swap risk\nConstructor explosion"]
 
-        B -->|Pros| B_pro["Named methods (no swapping)<br/>Clean optional fields"]
-        B -->|Cons| B_con["FORBIDS final fields<br/>Mutable & half-initialized states"]
+        JavaBeansPro["Pro: Named Methods\nNo argument swapping\nClean optional fields"]
+        JavaBeansCon["Con: Forbids final Fields\nMutable post-creation\nHalf-initialized states"]
+
+        Telescoping -->|"Strength"| TelescopingPro
+        Telescoping -.->|"Failure Mode"| TelescopingCon
+        JavaBeans -->|"Strength"| JavaBeansPro
+        JavaBeans -.->|"Failure Mode"| JavaBeansCon
     end
 
-    subgraph Solution["The Builder Pattern Resolution (Two-Phase Lifecycle)"]
+    subgraph Solution["2. Builder Pattern Resolution (Two-Phase Lifecycle)"]
         direction TB
-        Phase1["<b>Phase 1: Assembly (In Builder)</b><br/>• Non-final, mutable fields<br/>• Named fluent methods: <code>.name('events')</code><br/>• Accumulates state & applies defaults"]
-        BuildCall["<b>Transition: <code>.build()</code></b><br/>• Validates invariants<br/>• Passes all values into private constructor at once"]
-        Phase2["<b>Phase 2: The Product (The Finished Object)</b><br/>• 100% <code>final</code> fields assigned in constructor<br/>• Completely Immutable & Thread-safe<br/>• Impossible to mutate post-creation"]
+        Phase1["Phase 1: Assembly in Builder\nNon-final mutable fields · Defaults\nNamed fluent setters: .name 'events'"]
+        BuildCall{"Transition: .build\nInvariant Validation Gate\nAtomic private constructor handoff"}
+        Phase2["Phase 2: Immutable Product\n100% final fields assigned once\nThread-safe · Zero post-creation mutation"]
 
-        Phase1 --> BuildCall --> Phase2
+        Phase1 ==>|"Accumulated state"| BuildCall
+        BuildCall ==>|"Invariants verified"| Phase2
     end
 
-    Dilemma ==>|Resolved by| Solution
+    Dilemma ==>|"Resolved by two-phase construction"| Solution
 
-    classDef pro fill:#E8F5E9,stroke:#4CAF50,stroke-width:2px,color:#1B5E20;
-    classDef con fill:#FFEBEE,stroke:#F44336,stroke-width:2px,color:#B71C1C;
-    classDef phase fill:#E3F2FD,stroke:#1E88E5,stroke-width:2px,color:#0D47A1;
-    classDef transition fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#F57F17;
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
 
-    class A_pro,B_pro pro;
-    class A_con,B_con con;
-    class Phase1,Phase2 phase;
-    class BuildCall transition;
+    class Phase2 core
+    class TelescopingPro,JavaBeansPro,Phase1 service
+    class Telescoping,JavaBeans external
+    class TelescopingCon,JavaBeansCon async
+    class BuildCall guard
+
+    style Dilemma fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style Solution fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
 ```

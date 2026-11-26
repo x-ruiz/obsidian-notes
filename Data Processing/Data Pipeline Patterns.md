@@ -14,21 +14,67 @@ created: 2026-11-23
 Data integration moves and prepares data across heterogeneous sources and targets to power reporting, analytics, and AI workloads. **ETL, ELT, and TETL all aim to deliver clean, trusted data, differing primarily in *where* transformation compute executes relative to loading into the target platform.**
 
 ```mermaid
-flowchart LR
-    subgraph ETL["ETL (Transform in Flight)"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph ETL["1. ETL — Transform in Flight (Pre-Load PII Boundary)"]
         direction LR
-        S1["Sources"] --> E1["Extract"] --> T1["Transform (External Engine)"] --> L1["Load (Clean Data)"] --> D1["Warehouse / Lakehouse"]
+        S1(["Operational Sources\nSQL · NoSQL · SaaS"])
+        E1["Extract\nBatch / CDC Pull"]
+        T1["Transform Engine\nCleanse · Join · Mask PII\nExternal Compute"]
+        L1["Load\nValidated Records"]
+        D1[("Warehouse / Lakehouse\nCurated Tables Only")]
+
+        S1 -->|"Raw pull"| E1
+        E1 ==>|"In-flight stream"| T1
+        T1 ==>|"Masked & clean"| L1
+        L1 ==>|"Write structured"| D1
     end
 
-    subgraph ELT["ELT (Transform at Rest)"]
+    subgraph ELT["2. ELT — Transform at Rest (Cloud Pushdown Compute)"]
         direction LR
-        S2["Sources"] --> E2["Extract"] --> L2["Load (Raw Data)"] --> D2["Warehouse / Lakehouse"] --> T2["Transform (SQL / Pushdown)"]
+        S2(["Operational Sources\nSQL · NoSQL · Events"])
+        E2["Extract\nLow-Latency Pull"]
+        L2["Load Raw\nBronze Landing Zone\nStrict Raw RBAC"]
+        D2[("Warehouse / Lakehouse\nBronze -> Silver -> Gold")]
+        T2["Pushdown Transform\nElastic SQL / dbt\nIn-Place Refinement"]
+
+        S2 -->|"Raw pull"| E2
+        E2 ==>|"Fast ingest"| L2
+        L2 ==>|"Raw payload"| D2
+        D2 ==>|"In-place SQL"| T2
     end
 
-    subgraph TETL["TETL (Pre-Filter at Source)"]
+    subgraph TETL["3. TETL — Pre-Filter at Source (Minimal Egress)"]
         direction LR
-        S3["Sources"] --> PT3["Pre-Transform (Source Filter)"] --> E3["Extract"] --> T3["Transform (Heavy Engine)"] --> L3["Load"] --> D3["Target System"]
+        S3(["Operational Sources\nHigh-Noise Systems"])
+        PT3["Pre-Transform\nLightweight Source Filter\nPrune Noise / PII Early"]
+        E3["Extract\nReduced Payload"]
+        T3["Transform Engine\nHeavy Joins & Enrich"]
+        L3["Load\nCurated Output"]
+        D3[("Target System\nClean Analytical Store")]
+
+        S3 -->|"Local filter"| PT3
+        PT3 ==>|"Pruned dataset"| E3
+        E3 ==>|"Low egress"| T3
+        T3 ==>|"Enriched rows"| L3
+        L3 ==>|"Write curated"| D3
     end
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class T2,T3 core
+    class E1,L1,E2,L2,E3,L3 service
+    class D1,D2,D3 store
+    class S1,S2,S3 external
+    class T1,PT3 guard
+
+    style ETL fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style ELT fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style TETL fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ---

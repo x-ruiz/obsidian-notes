@@ -49,14 +49,48 @@ message Employees {
 Protobuf is **language-neutral, not zero-setup language-agnostic**: application runtimes cannot directly `import` or `require()` a raw `.proto` file. Instead, the OS-specific Protocol Buffer compiler (`protoc`) compiles a single `.proto` definition into native bindings (`*_pb.js`, `*_pb2.py`, Java classes, C++ headers) backed by a language-specific runtime library.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    Proto["employees.proto (Schema Contract)"] --> Protoc["protoc Compiler (OS Binary)"]
-    Protoc --> JS["employees_pb.js (Node.js / CommonJS)"]
-    Protoc --> Py["employees_pb2.py (Python)"]
-    Protoc --> Java["Employee.java (JVM Classes)"]
-    JS --> Bin["Compact Binary Bytes (Wire / Disk)"]
-    Py --> Bin
-    Java --> Bin
+    subgraph Contract["1. Schema Contract"]
+        Proto["employees.proto\nProto3 IDL Definition\nImmutable field tags: =1, =2, =3"]
+    end
+
+    subgraph Codegen["2. Build Toolchain"]
+        Protoc["protoc Compiler\nOS-Specific Binary\nVersion-pinned in CI"]
+    end
+
+    subgraph Bindings["3. Generated Native Bindings"]
+        JS["employees_pb.js\nNode.js / CommonJS\ngoogle-protobuf runtime"]
+        Py["employees_pb2.py\nPython Bindings\nTyped message classes"]
+        Java["Employee.java\nJVM Classes\nImmutable Builder Pattern"]
+    end
+
+    subgraph Wire["4. Compact Binary Output"]
+        Bin[("Compact Binary Bytes\nWire / Disk · Uint8Array\n52 B vs 125 B JSON · ~58% smaller")]
+    end
+
+    Proto ==>|"Compile IDL"| Protoc
+    Protoc -->|"--js_out"| JS
+    Protoc -->|"--python_out"| Py
+    Protoc -->|"--java_out"| Java
+    JS ==>|"serializeBinary()"| Bin
+    Py ==>|"SerializeToString()"| Bin
+    Java ==>|"toByteArray()"| Bin
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Protoc core
+    class JS,Py,Java service
+    class Bin store
+    class Proto guard
+
+    style Contract fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Codegen fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Bindings fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Wire fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### Compiling & Using Generated Bindings (Node.js Example)

@@ -20,11 +20,42 @@ Kafka replaces direct service-to-service wiring with a central event log:
 - **Consumers subscribe independently** to relevant topics and react on their own schedule, isolating runtime failures and team release cycles.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    Checkout["Checkout Service (Producer)"] -->|"Publish CheckoutEvent"| Topic["Topic: order.checkouts (Partitioned & Replicated Log)"]
-    Topic --> Shipment["Shipment Service (Consumer)"]
-    Topic --> Email["Email Receipt Service (Consumer)"]
-    Topic --> Inventory["Inventory Service (Consumer)"]
+    subgraph Producers["1. Event Producers"]
+        Checkout["Checkout Service\nKafka Producer API\nPartition Key: orderId"]
+    end
+
+    subgraph Cluster["2. Apache Kafka Cluster (Distributed Commit Log)"]
+        Topic[("Topic: order.checkouts\nPartitioned & Replicated Log\nDisk-Persisted · Replayable")]
+        SchemaReg["Schema Registry\nAvro / Protobuf Contract\nCompat Enforcement"]
+    end
+
+    subgraph Consumers["3. Independent Consumer Groups"]
+        Shipment["Shipment Service\nConsumer Group A\nFulfillment Trigger"]
+        Email["Email Receipt Service\nConsumer Group B\nAsync Notification"]
+        Inventory["Inventory Service\nConsumer Group C\nLocal State Projection"]
+    end
+
+    Checkout ==>|"Publish CheckoutEvent\nKeyed by orderId"| Topic
+    Checkout -.->|"Validate schema\nBackward / Forward compat"| SchemaReg
+    Topic ==>|"Pull offset · Group A\nPer-partition order"| Shipment
+    Topic -.->|"Pull offset · Group B\nIndependent lag"| Email
+    Topic ==>|"Pull offset · Group C\nLive or historical replay"| Inventory
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Topic core
+    class Checkout,Shipment,Inventory service
+    class Email async
+    class SchemaReg guard
+
+    style Producers fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style Cluster fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Consumers fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ---

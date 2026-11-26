@@ -24,37 +24,54 @@ Enterprise data rarely originates in a single clean repository. Pipelines bridge
   - **Machine Learning (ML) Pipelines:** Training and inference workloads that depend on large volumes of clean, consistent, high-quality data.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    subgraph Producers["Data Producers"]
-        DL["Data Lake"]
-        DB["SaaS & On-Prem DBs (SQL / NoSQL)"]
-        ST["Real-Time Streams (IoT / Sensors)"]
+    subgraph Producers["1. Data Producers (Sources)"]
+        DL[("Data Lake\nRaw Org Datasets\nPre-Curation Storage")]
+        DB[("SaaS & On-Prem DBs\nOperational SQL / NoSQL\nOLTP Workloads")]
+        ST(["Real-Time Streams\nIoT / Factory Sensors\nUnbounded Telemetry"])
     end
 
-    subgraph Pipeline["Data Pipeline Layer"]
-        ETL["ETL (Batch / Stream)"]
-        REP["Data Replication"]
-        VIRT["Data Virtualization (Zero-Copy)"]
+    subgraph Pipeline["2. Data Pipeline Layer (Movement & Quality)"]
+        ETL["ETL Pipeline\nBatch & Stream Ingest\nCleanse · Dedupe · Schema"]
+        REP["Data Replication\nContinuous Copy\nRead Isolation & DR"]
+        VIRT["Data Virtualization\nZero-Copy Federated Query\nRapid Prototyping Only"]
     end
 
-    subgraph Consumers["Data Consumers"]
-        DW["Enterprise Data Warehouse"]
-        BI["BI & Reporting"]
-        ML["Machine Learning Models"]
+    subgraph Consumers["3. Data Consumers (Destinations)"]
+        DW[("Enterprise Data Warehouse\nCurated Analytical Store\nQuery-Optimized")]
+        BI["BI & Reporting\nExecutive Dashboards\nOperational Metrics"]
+        ML["Machine Learning Models\nTraining & Inference\nQuality-Gated Features"]
     end
 
-    DL --> ETL
-    DB --> ETL
-    ST --> ETL
-    DB --> REP
-    DL --> VIRT
-    DB --> VIRT
+    DL -->|"Batch raw files"| ETL
+    DB -->|"Scheduled extract"| ETL
+    ST ==>|"Continuous stream"| ETL
+    DB ==>|"CDC / Continuous copy"| REP
+    DL -.->|"Federated read"| VIRT
+    DB -.->|"Zero-copy live query"| VIRT
 
-    ETL --> DW
-    REP --> DW
-    DW --> BI
-    DW --> ML
-    VIRT --> BI
+    ETL ==>|"Validated datasets"| DW
+    REP -->|"Replicated tables"| DW
+    DW ==>|"Curated SQL queries"| BI
+    DW ==>|"Clean feature feeds"| ML
+    VIRT -.->|"Prototype views\n(Graduate to ETL)"| BI
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+
+    class ETL core
+    class REP,BI,ML service
+    class DL,DW store
+    class DB,ST external
+    class VIRT async
+
+    style Producers fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style Pipeline fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Consumers fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ---

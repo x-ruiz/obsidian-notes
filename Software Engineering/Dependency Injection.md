@@ -24,25 +24,49 @@ created: 2026-11-23
 In traditional object-oriented designs without DI, dependent classes construct their own collaborators using direct instantiation (`new ConcreteClass()`). This practice binds high-level business components tightly to low-level implementations, creating rigid codebases that resist change, complicate integration testing, and violate the [[Single Responsibility Principle]].
 
 ```mermaid
-flowchart TD
-    subgraph DirectCreation["Tight Coupling (Without DI / Direct Instantiation)"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph DirectCreation["1. Tight Coupling (Without DI · Direct Instantiation)"]
         direction TB
-        CarDirect["Car"] -->|"instantiates directly via new"| LegacyEngineDirect["LegacyEngine"]
-        BikeDirect["Bike"] -->|"instantiates directly via new"| LegacyEngineDirect
+        CarDirect["Car\nDomain Caller\nOwns collaborator lifecycle"]
+        BikeDirect["Bike\nDomain Caller\nOwns collaborator lifecycle"]
+        LegacyEngineDirect["LegacyEngine\nConcrete Class\nHard compile-time binding"]
+
+        CarDirect -->|"new LegacyEngine()"| LegacyEngineDirect
+        BikeDirect -->|"new LegacyEngine()"| LegacyEngineDirect
     end
 
-    subgraph InjectedCreation["Loose Coupling (With DI & IoC Container)"]
+    subgraph InjectedCreation["2. Loose Coupling (With DI & IoC Container)"]
         direction TB
-        EngineInterface["Engine (Interface)"]
-        LegacyEngineImpl["LegacyEngine"] -.->|"implements"| EngineInterface
-        NewEngineImpl["NewEngine"] -.->|"implements"| EngineInterface
-        
-        CarDI["Car"] -->|"depends on abstraction"| EngineInterface
-        BikeDI["Bike"] -->|"depends on abstraction"| EngineInterface
+        IoCContainer["IoC Container / Framework Context\nSpring ApplicationContext\nRuntime graph assembler"]
+        CarDI["Car\nConstructor Injection\nImmutable final Engine"]
+        BikeDI["Bike\nConstructor Injection\nImmutable final Engine"]
+        EngineInterface[["Engine · Interface\nDIP Contract Boundary\nZero concrete coupling"]]
+        LegacyEngineImpl["LegacyEngine\nLegacy Implementation\nSwappable bean"]
+        NewEngineImpl["NewEngine\nActive Implementation\nBound at runtime"]
 
-        IoCContainer["IoC Container / Framework Context\n(e.g., Spring ApplicationContext)"] -->|"wires NewEngine bean into"| CarDI
-        IoCContainer -->|"wires NewEngine bean into"| BikeDI
+        IoCContainer ==>|"Wires NewEngine bean"| CarDI
+        IoCContainer ==>|"Wires NewEngine bean"| BikeDI
+        CarDI -->|"Depends on abstraction"| EngineInterface
+        BikeDI -->|"Depends on abstraction"| EngineInterface
+        LegacyEngineImpl -.->|"implements"| EngineInterface
+        NewEngineImpl -.->|"implements"| EngineInterface
     end
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class IoCContainer core
+    class CarDI,BikeDI,NewEngineImpl service
+    class CarDirect,BikeDirect external
+    class LegacyEngineDirect,LegacyEngineImpl async
+    class EngineInterface guard
+
+    style DirectCreation fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style InjectedCreation fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
 ```
 
 ### Key Deficiencies of Direct Instantiation
@@ -178,15 +202,32 @@ public class Car {
 ## Interplay Between DI, IoC, and Design Principles
 
 ```mermaid
-graph LR
-    IoC["Inversion of Control (IoC)<br/><i>High-level Principle</i>"]
-    DI["Dependency Injection (DI)<br/><i>Creational Pattern</i>"]
-    DIP["Dependency Inversion Principle (DIP)<br/><i>SOLID Design Principle</i>"]
-    Container["IoC Container / Assembler<br/><i>Runtime Engine</i>"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart LR
+    subgraph Principles["1. Architectural Foundations"]
+        IoC["Inversion of Control · IoC\nHigh-Level Principle\nFramework owns control flow"]
+        DIP["Dependency Inversion · DIP\nSOLID Design Principle\nDepend on abstractions"]
+    end
 
-    IoC -->|"realized via"| DI
-    DIP -->|"architectural foundation for"| DI
-    Container -->|"automates"| DI
+    subgraph Runtime["2. Pattern & Runtime Execution"]
+        DI["Dependency Injection · DI\nCreational Design Pattern\nExternal collaborator push"]
+        Container["IoC Container / Assembler\nRuntime Engine\nAutomated graph wiring"]
+    end
+
+    IoC ==>|"Realized via"| DI
+    DIP ==>|"Architectural foundation for"| DI
+    Container -->|"Automates lifecycle for"| DI
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class DI core
+    class Container service
+    class IoC,DIP guard
+
+    style Principles fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Runtime fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
 ```
 
 ### Inversion of Control vs Dependency Injection

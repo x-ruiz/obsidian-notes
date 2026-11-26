@@ -20,26 +20,45 @@ The **Model Context Protocol (MCP)** is an open standard client-server communica
 MCP implements a hierarchical client-server architecture where **Hosts** manage one or more isolated **MCP Clients**, each holding an exclusive 1-to-1 connection to an **MCP Server**.
 
 ```mermaid
-flowchart TD
-    subgraph Host["MCP Host (e.g., Claude Desktop, IDEs, Custom Agent Runtime)"]
-        LLM["Foundation Model / Reasoning Engine"]
-        HostInterface["Host Runtime & HITL Approval Interface"]
-        Client1["MCP Client 1"]
-        Client2["MCP Client 2"]
-        Client3["MCP Client 3"]
-        HostInterface <--> Client1
-        HostInterface <--> Client2
-        HostInterface <--> Client3
-        LLM <--> HostInterface
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph Host["1. MCP Host (Claude Desktop · IDEs · Custom Agent Runtime)"]
+        LLM["Foundation Model\nReasoning Engine\nContext & tool consumer"]
+        HostInterface["Host Runtime & HITL Gate\nSession Orchestrator\nEnforces user approval policy"]
+        Client1["MCP Client 1\n1:1 Protocol Adapter"]
+        Client2["MCP Client 2\n1:1 Protocol Adapter"]
+        Client3["MCP Client 3\n1:1 Protocol Adapter"]
+
+        LLM <-->|"Prompts & tool intents"| HostInterface
+        HostInterface <-->|"Approved RPC routing"| Client1
+        HostInterface <-->|"Approved RPC routing"| Client2
+        HostInterface <-->|"Approved RPC routing"| Client3
     end
 
-    Server1["MCP Server: SQLite Database"]
-    Server2["MCP Server: Filesystem / Google Drive"]
-    Server3["MCP Server: Telemetry & Observability"]
+    subgraph Servers["2. MCP Capability Servers (1:1 Isolated Peers)"]
+        Server1[("MCP Server: SQLite Database\nLocal Child Process\nTools · Resources · Prompts")]
+        Server2[("MCP Server: Filesystem / Drive\nRemote Capability Service\nScoped URI Access")]
+        Server3["MCP Server: Telemetry\nObservability Service\nLogs · Metrics · Traces"]
+    end
 
-    Client1 <-->|"stdio"| Server1
-    Client2 <-->|"Streamable HTTP"| Server2
-    Client3 <-->|"Streamable HTTP"| Server3
+    Client1 <-->|"stdio · OS pipes (local)"| Server1
+    Client2 <-->|"Streamable HTTP (/mcp)"| Server2
+    Client3 <-->|"Streamable HTTP (/mcp)"| Server3
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class LLM core
+    class HostInterface guard
+    class Client1,Client2,Client3 service
+    class Server1,Server2 store
+    class Server3 async
+
+    style Host fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Servers fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### Architectural Roles
@@ -54,13 +73,46 @@ flowchart TD
 MCP standardizes tool and data access into three distinct primitives with clear operational semantics:
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    Host["MCP Client"] -->|"tools/call (Mutating / Action)"| T["Tools"]
-    Host -->|"resources/read (Read-Only Context)"| R["Resources"]
-    Host -->|"prompts/get (Workflow Templates)"| P["Prompts"]
-    T -->|"POST Semantics"| Ext1["Execute Code, Update DB, Send Messages"]
-    R -->|"GET Semantics"| Ext2["Read Files, Logs, Dynamic Memos (URIs)"]
-    P -->|"Parametric"| Ext3["Predefined Expert Prompt Structures"]
+    subgraph ClientZone["1. Protocol Peer"]
+        Host["MCP Client\nJSON-RPC 2.0 Dispatcher\nCapability Discovery"]
+    end
+
+    subgraph Primitives["2. Core MCP Primitives"]
+        T["Tools\nMutating / Action Calls\nHITL approval gate"]
+        R["Resources\nRead-Only Context URIs\nZero tool-call token cost"]
+        P["Prompts\nWorkflow Templates\nParametric message arrays"]
+    end
+
+    subgraph Capabilities["3. Server Capability Targets"]
+        Ext1["State Mutations & Actions\nExecute Code · Update DB\nSend Messages"]
+        Ext2[("Contextual Data Payloads\nFiles · Logs · Dynamic Memos\nURI Templates: memo://id")]
+        Ext3["Guided Prompt Structures\nPredefined Expert Workflows\nServer-authored slots"]
+    end
+
+    Host ==>|"tools/call · Mutating"| T
+    Host -->|"resources/read · Context"| R
+    Host -.->|"prompts/get · Templates"| P
+    T ==>|"POST / PATCH semantics"| Ext1
+    R -->|"GET semantics"| Ext2
+    P -.->|"Parametric evaluation"| Ext3
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Host core
+    class T guard
+    class R,Ext3 service
+    class P async
+    class Ext1,Ext2 store
+
+    style ClientZone fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Primitives fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Capabilities fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 | Primitive | REST Analog | Semantic Intent | Ingestion Mechanics | Human-in-the-Loop (HITL) | Senior Note |
@@ -76,30 +128,32 @@ flowchart LR
 MCP exchanges JSON-RPC formatted messages across three distinct communication phases:
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "actorBkg": "#18181B", "actorBorder": "#7C3AED", "actorTextColor": "#F4F4F5", "actorLineColor": "#52525B", "signalColor": "#A855F7", "signalTextColor": "#E4E4E7", "labelBoxBkgColor": "#2E1065", "labelBoxBorderColor": "#A855F7", "labelTextColor": "#F5F3FF", "loopTextColor": "#D8B4FE", "noteBkgColor": "#1E1B2E", "noteBorderColor": "#6D28D9", "noteTextColor": "#EDE9FE", "activationBkgColor": "#4C1D95", "activationBorderColor": "#C084FC", "sequenceNumberColor": "#FAF5FF", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}}}%%
 sequenceDiagram
     autonumber
-    actor Host as MCP Host (Client)
-    actor Server as MCP Server
+    participant Host as MCP Host (Client)
+    participant Server as MCP Server
 
-    rect rgb(240, 248, 255)
-        Note over Host,Server: Phase 1: Handshake & Initialization
-        Host->>Server: initialize (capabilities, protocolVersion, clientInfo)
+    rect rgb(22, 20, 31)
+        Note over Host,Server: Phase 1: Handshake & Capability Negotiation
+        Host->>+Server: initialize (capabilities, protocolVersion, clientInfo)
         Server-->>Host: InitializeResult (capabilities, protocolVersion, serverInfo)
         Host->>Server: notifications/initialized
     end
 
-    rect rgb(255, 250, 240)
-        Note over Host,Server: Phase 2: Active Message Exchange
+    rect rgb(30, 27, 46)
+        Note over Host,Server: Phase 2: Active JSON-RPC 2.0 Message Exchange
         Host->>Server: tools/list
         Server-->>Host: Tool definitions & JSON Schemas
         Host->>Server: tools/call (name="execute_sql_query", arguments={...})
-        Server-->>Host: Tool result or structured error
+        Server-->>Host: Tool result or structured JSON-RPC error
         Server--xHost: notifications/message (Resource updated)
     end
 
-    rect rgb(255, 240, 245)
-        Note over Host,Server: Phase 3: Termination
+    rect rgb(15, 15, 20)
+        Note over Host,Server: Phase 3: Orderly Session Termination
         Host->>Server: Close connection / Subprocess SIGTERM
+        deactivate Server
     end
 ```
 

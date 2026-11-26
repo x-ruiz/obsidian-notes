@@ -20,15 +20,51 @@ The **ReAct (Reason + Act)** pattern is an [[AI Agents|AI agent]] execution arch
 Traditional foundation models generate direct answers in a single forward pass without verifying facts or interacting with live environments. ReAct introduces a stateful cyclic execution harness where the LLM alternates between reasoning about the current state and interacting with external systems.
 
 ```mermaid
-flowchart TD
-    Query["User Query"] --> Reason["Reason (Generate Thought Trace)"]
-    Memory[("Working Memory / Trace History")] <--> Reason
-    Reason --> Decide{"Goal Satisfied?"}
-    Decide -->|"Yes: Formulate Final Answer"| FinalAnswer["Final Output"]
-    Decide -->|"No: Dispatch Tool"| Act["Act (Invoke External Tool)"]
-    Act --> Observe["Observe (Capture Tool Output / Error)"]
-    Observe --> UpdateTrace["Append Observation to Trace"]
-    UpdateTrace --> Reason
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph ClientTier["1. Client Interface"]
+        Query(["User Query\nOpen-Ended Goal"])
+        FinalAnswer(["Final Output\nSynthesized Answer"])
+    end
+
+    subgraph Harness["2. ReAct Harness (Bounded max_steps Loop)"]
+        Reason["Reason Stage\nGenerate Thought Trace\nAssess State & Gaps"]
+        Memory[("Working Memory\nAppend-Only Trace History\nThought · Action · Obs")]
+        Decide{"Goal & Budget Gate\nSatisfied or\nmax_steps Reached?"}
+        UpdateTrace["Trace Sanitizer\nTruncate Verbose Payload\nAppend Observation"]
+    end
+
+    subgraph ToolPlane["3. External Tool Environment"]
+        Act["Act Stage\nInvoke External Tool\nSQL · NoSQL · APIs"]
+        Observe["Observe Stage\nCapture Tool Output\nOr Exception Payload"]
+    end
+
+    Query ==>|"Initial prompt"| Reason
+    Memory <-->|"Read / Write\nFull trace history"| Reason
+    Reason ==>|"Emit AgentStep"| Decide
+    Decide ==>|"Yes · Formulate\nfinal_answer"| FinalAnswer
+    Decide -->|"No · Dispatch\nstructured tool call"| Act
+    Act ==>|"Execute with\ntyped arguments"| Observe
+    Observe -.->|"Raw output or\nToolExecutionError"| UpdateTrace
+    UpdateTrace -->|"Re-inject observation\nNext loop step"| Reason
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Reason core
+    class Act,UpdateTrace service
+    class Memory store
+    class Query,FinalAnswer external
+    class Observe async
+    class Decide guard
+
+    style ClientTier fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style Harness fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style ToolPlane fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### The Thought-Action-Observation Loop

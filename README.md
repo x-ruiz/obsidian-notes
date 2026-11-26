@@ -4,11 +4,47 @@ This Mastery Framework outlines my structured path to becoming a better engineer
 Below is my current evaluation of my skills in each categories as of **Mar 14 2026**
 
 ```mermaid
-xychart-beta
-    title "Competency Profile (Scale 0 - 10)"
-    x-axis ["Cloud Infra", "Data Proc", "InfoSec", "Software Eng", "System Res", "AI Eng"]
-    y-axis "Rating (0 - 10)" 0 --> 10
-    bar [5, 3, 1, 2, 0, 0]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    Profile["Competency Profile\nMar 14 2026 · Scale 0-10\n6 Engineering Mastery Pillars"]
+
+    subgraph Developing["1. Developing Mastery (3-5 / 10)"]
+        CloudInfra["Cloud Infrastructure\nRating: 5 / 10\nScalable Arch · IaC · K8s"]
+        DataProc["Data Processing\nRating: 3 / 10\nETL/ELT · Streaming · Storage"]
+    end
+
+    subgraph Foundational["2. Early Foundations (1-2 / 10)"]
+        SoftEng["Software Engineering\nRating: 2 / 10\nPatterns · Testing · CI/CD"]
+        InfoSec["Information Security\nRating: 1 / 10\nAuthN/Z · Secrets · Compliance"]
+    end
+
+    subgraph Planned["3. Planned Horizon (0 / 10)"]
+        SysRes["System Resiliency\nRating: 0 / 10\nObservability · Chaos · DR"]
+        AIEng["AI Engineering\nRating: 0 / 10\nML Pipelines · Agents · MLOps"]
+    end
+
+    Profile ==>|"5 / 10 · Primary focus"| CloudInfra
+    Profile ==>|"3 / 10 · Active build"| DataProc
+    Profile -->|"2 / 10 · Core craft"| SoftEng
+    Profile -->|"1 / 10 · Security baseline"| InfoSec
+    Profile -.->|"0 / 10 · Planned horizon"| SysRes
+    Profile -.->|"0 / 10 · Planned horizon"| AIEng
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef store fill:#09090B,stroke:#C084FC,stroke-width:1.5px,color:#EDE9FE
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+
+    class Profile core
+    class CloudInfra,DataProc service
+    class SoftEng store
+    class InfoSec guard
+    class SysRes,AIEng async
+
+    style Developing fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Foundational fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Planned fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
 ```
 <div class="flourish-embed flourish-radar" data-src="visualisation/28059856"><script src="https://public.flourish.studio/resources/embed.js"></script><noscript><img src="https://public.flourish.studio/visualisation/28059856/thumbnail" width="100%" alt="radar visualization" /></noscript></div>
 

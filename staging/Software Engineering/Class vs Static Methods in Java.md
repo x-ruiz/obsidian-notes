@@ -103,16 +103,49 @@ TableConfig table = FileParser.parseTable(tablePath);
 Do not create an instantiated class until at least one of four architectural pressures forces the transition:
 
 ```mermaid
-flowchart TD
-    Start["Stateless Pure Function"] --> S1{"1. Owns Mutable/Immutable State\n& Enforces Invariants?"}
-    S1 -->|"Yes"| ExtractClass["Create Dedicated Class / Record\n(e.g., TableSchema, DataBuffer)"]
-    S1 -->|"No"| S2{"2. Requires External Collaborators\n(Clients, ObjectMappers, Config)?"}
-    S2 -->|"Yes"| DIClass["Instantiate Service Class\nwith Injected Dependencies"]
-    S2 -->|"No"| S3{"3. Needs Polymorphic Swapping\nBehind an Interface?"}
-    S3 -->|"Yes"| PolyClass["Implement Common Interface\n(e.g., YamlParser implements FormatParser)"]
-    S3 -->|"No"| S4{"4. Helper Clutter &\nCohesion Breakdown?"}
-    S4 -->|"Yes"| SplitModule["Extract Cohesive Sub-Module\nor Dedicated Worker"]
-    S4 -->|"No"| KeepStatic["Retain Cohesive Static Method\nin Domain Module"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph Entry["1. Default Baseline"]
+        Start(["Stateless Pure Function\nZero State · Zero Collaborators"])
+    end
+
+    subgraph Gates["2. Architectural Promotion Signals"]
+        S1{"1. Owns State &\nEnforces Invariants?"}
+        S2{"2. External Collaborators\nClients · ObjectMappers · Config?"}
+        S3{"3. Polymorphic Swapping\nBehind an Interface?"}
+        S4{"4. Private-Helper Clutter &\nCohesion Breakdown?"}
+    end
+
+    subgraph Outcomes["3. Target JVM Abstraction"]
+        ExtractClass["Dedicated Class / Record\nTableSchema · DataBuffer\nDefends State Invariants"]
+        DIClass["Instantiated Service Class\nConstructor DI · Final Fields\nMockable in Unit Tests"]
+        PolyClass["Interface Implementation\nYamlParser implements FormatParser\nRuntime Polymorphism"]
+        SplitModule["Extracted Sub-Module / Worker\nIsolated Private Helpers\nRestored File Cohesion"]
+        KeepStatic["Retain Cohesive Static Method\nFinal Domain Module · Private Ctor\nZero Allocations · Lowest Overhead"]
+    end
+
+    Start ==>|"Evaluate friction"| S1
+    S1 ==>|"Yes · State + Rules"| ExtractClass
+    S1 -->|"No · Stateless"| S2
+    S2 ==>|"Yes · Needs DI"| DIClass
+    S2 -->|"No · Pure Args"| S3
+    S3 ==>|"Yes · Interface Contract"| PolyClass
+    S3 -->|"No · Single Impl"| S4
+    S4 ==>|"Yes · Junk-Drawer Bloat"| SplitModule
+    S4 -.->|"No · High Cohesion"| KeepStatic
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class KeepStatic core
+    class ExtractClass,DIClass,PolyClass,SplitModule service
+    class Start external
+    class S1,S2,S3,S4 guard
+    style Entry fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Gates fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Outcomes fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### Signal 1: State & Invariants (Data + Rules)
@@ -140,9 +173,31 @@ When a single static module grows so large that independent operations accumulat
 Architecture evolves through three discrete stages as complexity grows. Avoid jumping straight to Stage 3 before the problem demands it.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    Stage1["Stage 1: Pure Static Module\nFileParser.parseTable(path)"] -->|"Add shared dependency"| Stage2["Stage 2: Single Instantiated Service\nnew FileParser(objectMapper)"]
-    Stage2 -->|"Private helper clutter / Multiple formats"| Stage3["Stage 3: Extracted Collaborators\nTableFileParser implements ConfigParser"]
+    subgraph S1Zone["1. Pure Static Module"]
+        Stage1["FileParser · Static Module\nFileParser.parseTable\nZero State · Zero Dependencies"]
+    end
+
+    subgraph S2Zone["2. Single Instantiated Service"]
+        Stage2["FileParser · Instantiated\nConstructor-Injected ObjectMapper\nShared Final Collaborators · Mockable"]
+    end
+
+    subgraph S3Zone["3. Extracted Collaborators"]
+        Stage3["TableFileParser implements ConfigParser\nDedicated Polymorphic Worker\nIsolated Private Helper Trees"]
+    end
+
+    Stage1 ==>|"Add shared dependency\n(ObjectMapper / Validator)"| Stage2
+    Stage2 ==>|"Private helper clutter\nor multiple format contracts"| Stage3
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+
+    class Stage1 core
+    class Stage2,Stage3 service
+    style S1Zone fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style S2Zone fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style S3Zone fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
 ```
 
 ### Stage 1: Pure Functions (Static Methods)

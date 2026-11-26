@@ -104,12 +104,46 @@ Complex workflows benefit from multi-agent architectures that divide labor acros
 A lightweight, low-cost classifier routes incoming requests to narrow domain agents, escalating to heavy reasoning models only when task complexity warrants it:
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    IncomingQuery["User Query"] --> Classifier["Fast Classifier Agent (Low-Cost SLM)"]
-    Classifier -->|"Low Complexity"| SpecializedAgent["Specialized Agent (Domain Schema)"]
-    Classifier -->|"High Complexity"| ResearchAgent["Advanced Reasoning Agent (Heavy LLM)"]
-    SpecializedAgent --> Aggregator["Synthesis / Verification"]
-    ResearchAgent --> Aggregator
+    subgraph Ingress["1. Ingress & Complexity Triage"]
+        IncomingQuery(["User Query\nRequest Envelope\n+ Unique Agent ID"])
+        Classifier{"Fast Classifier Agent\nLow-Cost SLM\nComplexity & Intent Triage"}
+    end
+
+    subgraph Execution["2. Bounded Agent Execution"]
+        SpecializedAgent["Specialized Agent\nNarrow Domain Schema\nDeterministic Tools"]
+        ResearchAgent["Advanced Reasoning Agent\nHeavy LLM Loop\nCapped max_steps"]
+        SafetyGate["Governance Guardrail\nHITL Gate & Kill-Switch\nRead vs. Mutate Policy"]
+    end
+
+    subgraph Verification["3. Synthesis & Verification"]
+        Aggregator["Synthesis & Verifier\nGolden Regression Checks\nHallucination Guard"]
+        FinalOut(["Verified Response\nAudited Provenance"])
+    end
+
+    IncomingQuery ==>|"Inbound prompt"| Classifier
+    Classifier -->|"Low complexity\nBounded domain"| SpecializedAgent
+    Classifier ==>|"High complexity\nMulti-hop reasoning"| ResearchAgent
+    ResearchAgent -.->|"Mutating tool call\nPolicy check"| SafetyGate
+    SafetyGate -.->|"Approved or halted\nAudit trail"| ResearchAgent
+    SpecializedAgent -->|"Structured result"| Aggregator
+    ResearchAgent -->|"Synthesized trace"| Aggregator
+    Aggregator ==>|"Validated output"| FinalOut
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Classifier,Aggregator core
+    class SpecializedAgent,ResearchAgent service
+    class IncomingQuery,FinalOut external
+    class SafetyGate guard
+
+    style Ingress fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style Execution fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Verification fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### Multi-Agent Pitfalls & Operational Hazards

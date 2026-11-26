@@ -25,25 +25,55 @@ Software delivery methodologies have continually shifted the primary driving art
 4. **Spec-Driven Development (SDD):** Developers prompt the LLM to specify *system behavior and constraints*, producing an auditable requirements contract. Once approved by human engineers, this specification compiles into a design document, task hierarchy, and test fixtures that steer the coding agent's implementation loop.
 
 ```mermaid
-flowchart TD
-    subgraph VibeCoding["Vibe Coding (Heuristic Loop)"]
-        VPrompt["Natural Language Request"] --> VCodeGen["LLM Code Generation"]
-        VCodeGen --> VInspect{"Manual Inspection"}
-        VInspect -->|"Flawed / Hallucinated"| VReprompt["Iterative Prompt Patching"]
-        VReprompt --> VCodeGen
-        VInspect -->|"Acceptable"| VDone["Desired Implementation"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph VibeCoding["1. Vibe Coding (Heuristic Loop)"]
+        VPrompt(["Natural Language Request\nAmbiguous Prompt"])
+        VCodeGen["LLM Code Generation\nStochastic Synthesis\nNo Formal Contract"]
+        VInspect{"Manual Inspection\nAd-Hoc Diff Review"}
+        VReprompt["Iterative Prompt Patching\nContext Churn & Drift"]
+        VDone(["Desired Implementation\nLow Repeatability"])
     end
 
-    subgraph SDD["Spec-Driven Development (Contract-First Loop)"]
-        SPrompt["System Goal & Constraints"] --> SContract["Specification Contract (PRD / Schema)"]
-        SContract --> SGate1{"Human Approval Gate"}
-        SGate1 -->|"Approved"| SDesign["Design Doc & Task Breakdown"]
-        SGate1 -->|"Revise Spec"| SPrompt
-        SDesign --> SCodeGen["AI Coding Agent Implementation"]
-        SCodeGen --> SVerify["Automated Test Verification"]
-        SVerify -->|"Pass"| SProduction["Deterministic Deployment"]
-        SVerify -->|"Fail"| SCodeGen
+    subgraph SDD["2. Spec-Driven Development (Contract-First Loop)"]
+        SPrompt(["System Goal & Constraints\nRequirements Input"])
+        SContract[("Specification Contract\nPRD · OpenAPI · Schema\nAcceptance Matrix")]
+        SGate1{"Human Approval Gate\nZero Refactoring Debt\nPre-Code Sign-Off"}
+        SDesign["Design Doc & Task DAG\nDiscrete Bounded Units"]
+        SCodeGen["AI Coding Agent\nContract-Bound Codegen"]
+        SVerify{"Automated Verification\nSpec-Derived Test Suite\nCI/CD Gate"}
+        SProduction(["Deterministic Deployment\nAuditable Release"])
     end
+
+    VPrompt -->|"Ad-hoc prompt"| VCodeGen
+    VCodeGen -->|"Raw multi-file diff"| VInspect
+    VInspect -.->|"Flawed / Hallucinated"| VReprompt
+    VReprompt -.->|"Append debug churn"| VCodeGen
+    VInspect -->|"Acceptable"| VDone
+
+    SPrompt ==>|"Formalize intent"| SContract
+    SContract ==>|"Contract review"| SGate1
+    SGate1 -.->|"Revise spec"| SPrompt
+    SGate1 ==>|"Approved"| SDesign
+    SDesign ==>|"Scoped task + TC-*"| SCodeGen
+    SCodeGen ==>|"Implementation + tests"| SVerify
+    SVerify -.->|"Fail · Retry in scope"| SCodeGen
+    SVerify ==>|"Pass · All TC-* green"| SProduction
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class SContract,SProduction core
+    class VInspect,SDesign,SCodeGen service
+    class VPrompt,VDone,SPrompt external
+    class VCodeGen,VReprompt async
+    class SGate1,SVerify guard
+
+    style VibeCoding fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style SDD fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
 ```
 
 ---
@@ -70,6 +100,7 @@ SDD restructures the engineering workflow so that natural language is used to co
 The SDD workflow formalizes the interaction between human software architects and autonomous AI coding agents across four distinct phases.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "actorBkg": "#18181B", "actorBorder": "#7C3AED", "actorTextColor": "#F4F4F5", "actorLineColor": "#52525B", "signalColor": "#A855F7", "signalTextColor": "#E4E4E7", "labelBoxBkgColor": "#2E1065", "labelBoxBorderColor": "#A855F7", "labelTextColor": "#F5F3FF", "loopTextColor": "#D8B4FE", "noteBkgColor": "#1E1B2E", "noteBorderColor": "#6D28D9", "noteTextColor": "#EDE9FE", "activationBkgColor": "#4C1D95", "activationBorderColor": "#C084FC", "sequenceNumberColor": "#FAF5FF", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}}}%%
 sequenceDiagram
     autonumber
     actor Developer as Human Engineer
@@ -78,17 +109,30 @@ sequenceDiagram
     participant Agent as Coding & Test Agent
     participant Runtime as Test Harness
 
-    Developer->>LLM: Prompt system intent, constraints, and operational environment
-    LLM->>Spec: Generate formal requirements, API schemas, and error envelopes
-    Spec-->>Developer: Present spec for review
-    critical Human Approval Gate
-        Developer->>Spec: Review and approve/edit contract
+    Developer->>+LLM: Prompt system intent, constraints, and operational environment
+    LLM->>+Spec: Generate formal requirements, API schemas, and error envelopes
+    Spec-->>Developer: Present draft contract for review
+    deactivate LLM
+
+    critical Human Approval Gate (Zero Refactoring Debt)
+        Developer->>Spec: Review, tighten invariants, and approve contract
+    option Revision Requested
+        Developer-->>LLM: Refine Non-Goals, schemas, or acceptance criteria
     end
-    Spec->>Agent: Ingest validated spec and task decomposition
-    Agent->>Agent: Generate implementation code adhering to schemas
-    Agent->>Runtime: Generate and execute contract-verification test suite
-    Runtime-->>Agent: Test execution report (Pass / Fail)
-    Agent-->>Developer: Clean PR with implementation code + passing test suite
+
+    Spec->>+Agent: Ingest validated spec and task DAG
+    deactivate Spec
+
+    loop Bounded Verification Loop (max_steps)
+        Agent->>Agent: Generate implementation code adhering to schemas
+        Agent->>+Runtime: Generate and execute contract-verification test suite
+        Runtime-->>-Agent: Test execution report (Pass / Fail)
+        alt Test Failure
+            Agent->>Agent: Patch code against failing TC-* acceptance case
+        end
+    end
+
+    Agent-->>-Developer: Clean PR with implementation code + passing test suite
 ```
 
 ### 1. Requirements & Constraint Specification
@@ -112,24 +156,50 @@ Spec-Driven Development and agent execution patterns operate at **different arch
 In production coding systems, SDD is neither pure [[ReWOO Pattern|ReWOO]] nor pure [[ReAct Pattern|ReAct]]—it composes both into a **two-tier hybrid architecture**: **Grounded Macro-ReWOO** for planning and governance, delegating to **Bounded Micro-ReAct** workers for code generation and verification.
 
 ```mermaid
-flowchart TD
-    subgraph Macro["Macro Layer: Grounded ReWOO (Upfront Planning & Governance)"]
-        Goal["System Goal & Constraints"] --> Research["Read-Only Codebase Exploration"]
-        Research --> Spec["Specification Contract"]
-        Spec --> Gate{"Human Approval Gate"}
-        Gate -->|"Revise"| Spec
-        Gate -->|"Approved"| DAG["Task DAG (Discrete Units + Acceptance Criteria)"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph Macro["1. Macro Layer: Grounded ReWOO (Upfront Planning & Governance)"]
+        Goal(["System Goal & Constraints\nFeature Objective"])
+        Research["Read-Only Exploration\nCodebase Grounding\nZero Mutations"]
+        Spec[("Specification Contract\nSchemas · Invariants · TC-*")]
+        Gate{"Human Approval Gate\nSingle High-Leverage Check"}
+        DAG["Task DAG\nDiscrete Units\n+ Acceptance Criteria"]
     end
 
-    subgraph Micro["Micro Layer: Bounded ReAct Workers (Per DAG Node)"]
-        DAG --> W1["Worker A: Edit -> Run Tests -> Observe -> Fix"]
-        DAG --> W2["Worker B: Edit -> Run Tests -> Observe -> Fix"]
+    subgraph Micro["2. Micro Layer: Bounded ReAct Workers (Per DAG Node)"]
+        W1["Worker A · Micro-ReAct\nEdit -> Test -> Observe -> Fix\nCapped max_steps"]
+        W2["Worker B · Micro-ReAct\nEdit -> Test -> Observe -> Fix\nCapped max_steps"]
     end
 
-    W1 -->|"Spec assumption violated (Escalate)"| Spec
-    W2 -->|"Spec assumption violated (Escalate)"| Spec
-    W1 -->|"Acceptance suite passes"| Verify["Integration & PR Gate"]
+    subgraph Release["3. Verification & Release Gate"]
+        Verify{"Integration & PR Gate\nFull Acceptance Suite\nSpec-Diff Audit"}
+    end
+
+    Goal ==>|"Define scope"| Research
+    Research ==>|"Grounded context"| Spec
+    Spec ==>|"Submit for sign-off"| Gate
+    Gate -.->|"Revise contract"| Spec
+    Gate ==>|"Approved"| DAG
+    DAG ==>|"Dispatch unit A"| W1
+    DAG ==>|"Dispatch unit B"| W2
+    W1 -.->|"Spec assumption violated\nEscalate · No silent drift"| Spec
+    W2 -.->|"Spec assumption violated\nEscalate · No silent drift"| Spec
+    W1 -->|"Acceptance suite passes"| Verify
     W2 -->|"Acceptance suite passes"| Verify
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Spec,DAG core
+    class Research,W1,W2 service
+    class Goal external
+    class Gate,Verify guard
+
+    style Macro fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Micro fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Release fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### How the Execution Paradigms Map
@@ -152,25 +222,64 @@ Teams adopting SDD face a structural trade-off between **over-standardization** 
 The effective pattern is a **composable spec architecture**: maintain a **single invariant Core Skeleton** across the repository, pair it with **2–4 domain-specific Contract Modules** by work archetype, and scale depth by blast radius.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    Core["Invariant Core Skeleton (Goal, Non-Goals, Invariants, Acceptance Matrix)"] --> Compose["Feature Specification"]
-    subgraph Archetypes["Archetype Contract Modules (Pick One)"]
-        API["API / Service (OpenAPI, Error Envelopes)"]
-        Data["Data Pipeline (DDL, Grain, Idempotency)"]
-        UI["UI Workflow (States, Events, A11y)"]
-        CLI["CLI / Tooling (Flags, Exit Codes, Stdout)"]
+    subgraph Foundation["1. Core Skeleton & Sizing Guardrail"]
+        Core["Invariant Core Skeleton\nGoal · Non-Goals · REQ-*\nInvariants · TC-* Matrix"]
+        Tier{"Detail Tier Guardrail\nMini-Spec 80-160L\nvs. Full Spec 160-250L"}
     end
-    API --> Compose
-    Data --> Compose
-    UI --> Compose
-    CLI --> Compose
-    Tier["Detail Tier (Mini-Spec vs. Full Spec)"] --> Compose
+
+    subgraph Archetypes["2. Archetype Contract Modules (Pick One)"]
+        API["API / Service Module\nOpenAPI · Auth\nError Envelopes"]
+        Data["Data Pipeline Module\nDDL · Grain · Freshness\nIdempotency Rules"]
+        UI["UI Workflow Module\nStates · Events\nA11y Constraints"]
+        CLI["CLI / Tooling Module\nFlags · Exit Codes\nStdout Contract"]
+    end
+
+    subgraph Output["3. Composed Spec Artifact"]
+        Compose[("Feature Specification\nExecutable Contract\nReady for Approval Gate")]
+    end
+
+    Core ==>|"Sections 1-3 & 5-6"| Compose
+    API -->|"Section 4 · REST / RPC"| Compose
+    Data -->|"Section 4 · ELT / Batch"| Compose
+    UI -->|"Section 4 · Interactive UI"| Compose
+    CLI -->|"Section 4 · CLI Contract"| Compose
+    Tier -.->|"Bounds REQ / TC budget"| Compose
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Core,Compose core
+    class API,Data,UI,CLI service
+    class Tier guard
+
+    style Foundation fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
+    style Archetypes fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Output fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### Why Composable Templates Work
 - **Pre-Flight Completeness Checklist:** Fixed core headings force engineers and planning agents to specify **Non-Goals**, **Error Envelopes**, and **Acceptance Criteria** before code is generated.
 - **Deterministic Agent Parsing:** Coding agents extract constraints more accurately from predictable Markdown/YAML schemas than from free-form prose.
 - **Compounding Institutional Memory:** Whenever an agent misses a recurring production requirement (e.g., rate limiting, backward compatibility, or telemetry), adding one prompt line to the shared template eliminates that class of bug across all future features.
+
+### Spec Sizing & Chunking Guardrails
+
+Once a specification grows past ~250 lines or ~15 acceptance cases (`TC-*`), the Human Approval Gate degrades: reviewers skim instead of scrutinizing invariants, and mid-flight scope creep leaks in. Right-size every spec before writing code:
+
+| Tier | Target Length | `REQ` / `TC` Budget | Delivery Scope | Senior Note |
+| :--- | :--- | :--- | :--- | :--- |
+| **Mini-Spec** | 80 – 160 lines | 5 – 10 | 1 focused feature, plugin, or bounded module change (1 PR) | Default sweet spot for iterative delivery and crisp PR reviews. |
+| **Full Spec** | 160 – 250 lines | 10 – 15 | 1 cohesive new core module or multi-component subsystem (1–2 PRs) | Maximum size for a single human approval gate. |
+| **Epic (Split Required)** | > 250 lines | > 15 | Cross-cutting platform or multi-module rollout | Write a 1-page `00_` architecture overview and slice into 2–4 sequential specs (`01`, `02`, `03`). |
+
+Apply four concrete splitting heuristics when chunking a larger project:
+1. **Lifecycle & Blast Radius Boundary:** Never bundle resources operated by different actors on different cadences (e.g., one-time Admin bootstrap scripts vs. continuous GitOps environment modules).
+2. **Artifact / Module Boundary:** Give separate build artifacts or dependency graphs (e.g., cloud-agnostic core adapter vs. cloud-specific SPI plugin JAR) their own specs.
+3. **The "And" Smell Test:** If a spec title requires two or more commas or `&` conjunctions, it almost certainly glues multiple specs together.
+4. **Independent Verification Gate:** Slice at the smallest vertical boundary where `mvn test`, `pytest`, or `tofu test` verifies the deliverable end-to-end before starting the next spec.
 
 ### Example 1: Invariant Core Spec Template
 

@@ -18,12 +18,41 @@ gRPC is designed primarily for internal, east-west backend communication rather 
 - **Unified Transport & Client Abstraction:** Without gRPC, every language runtime relies on separate HTTP client libraries maintained by different ecosystems—multiplying boilerplate, extension effort, and maintenance drift as service count grows. gRPC manages HTTP/2 connections and client mechanics automatically across languages.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
 flowchart LR
-    Browser["Web Browser (Frontend)"] -->|"REST / HTTP + JSON"| Gateway["API Gateway / BFF"]
-    Gateway -->|"gRPC (HTTP/2 + Binary)"| JavaSvc["Java Service"]
-    JavaSvc <-->|"gRPC (HTTP/2 + Binary)"| PySvc["Python Analytics Service"]
-    JavaSvc <-->|"gRPC (HTTP/2 + Binary)"| GoSvc["Go Worker Service"]
-    PySvc <-->|"gRPC (HTTP/2 + Binary)"| GoSvc
+    subgraph Edge["1. Browser Edge (External)"]
+        Browser(["Web Browser\nFrontend Client\nNo native gRPC support"])
+    end
+
+    subgraph Ingress["2. Edge Translation Layer"]
+        Gateway["API Gateway / BFF\nProtocol Bridge\nREST/JSON to gRPC"]
+    end
+
+    subgraph InternalMesh["3. East-West Polyglot Microservices (Internal)"]
+        JavaSvc["Java Core Service\nGenerated gRPC Stubs\nTyped Proto3 Builders"]
+        PySvc["Python Analytics Service\nGenerated gRPC Stubs\nUniform HTTP/2 Client"]
+        GoSvc["Go Worker Service\nGenerated gRPC Stubs\nHigh-Throughput RPC"]
+    end
+
+    Browser -->|"REST / HTTP + JSON"| Gateway
+    Gateway ==>|"gRPC · HTTP/2 + Binary"| JavaSvc
+    JavaSvc <-->|"gRPC · HTTP/2 + Binary"| PySvc
+    JavaSvc <-->|"gRPC · HTTP/2 + Binary"| GoSvc
+    PySvc <-->|"gRPC · HTTP/2 + Binary"| GoSvc
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class JavaSvc core
+    class PySvc,GoSvc service
+    class Browser external
+    class Gateway guard
+
+    style Edge fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style Ingress fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style InternalMesh fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ---

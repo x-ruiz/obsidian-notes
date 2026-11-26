@@ -24,21 +24,43 @@ In enterprise data platforms and distributed compute engines (e.g., Apache Spark
 Hardcoding provider selection or packing all cloud SDKs into a single monolithic JAR creates severe maintenance and operational hazards:
 
 ```mermaid
-flowchart TD
-    subgraph Monolith["Anti-Pattern: Monolithic Fat Pipeline"]
-        Core1["Core Ingestion Pipeline"] --> HardcodedSwitch["Hardcoded switch(cloudType)"]
-        HardcodedSwitch --> AWS_SDK["AWS SDK v2 + S3 Client"]
-        HardcodedSwitch --> GCP_SDK["GCP SDK + BigLake Client"]
-        HardcodedSwitch --> Azure_SDK["Azure SDK + ADLS Client"]
-        style Monolith fill:#fff0f0,stroke:#d9534f
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph Monolith["1. Anti-Pattern: Monolithic Fat Pipeline (All SDKs Bundled)"]
+        Core1["Core Ingestion Pipeline\nSingle Fat JAR\nTight Compile-Time Coupling"]
+        HardcodedSwitch{"Hardcoded Switch on cloudType\nClosed to Extension\nGuava / Netty / Protobuf Collisions"}
+        AWS_SDK["AWS SDK v2 + S3 Client\nBundled on Shared Classpath"]
+        GCP_SDK["GCP SDK + BigLake Client\nBundled on Shared Classpath"]
+        Azure_SDK["Azure SDK + ADLS Client\nBundled on Shared Classpath"]
     end
 
-    subgraph SPI_Pattern["Clean SPI Architecture: Swappable Plugin Modules"]
-        Core2["Core Pipeline Engine\n(lakehouse-iceberg)"] --> SPI["IcebergCatalogProvider\n(SPI Interface)"]
-        SPI -.->|"Discovered at runtime via ServiceLoader"| PluginAWS["lakehouse-iceberg-aws.jar\n(Provides AWS/MinIO Catalog)"]
-        SPI -.->|"Discovered at runtime via ServiceLoader"| PluginGCP["lakehouse-iceberg-gcp.jar\n(Provides BigLake Catalog)"]
-        style SPI_Pattern fill:#f0fff0,stroke:#5cb85c
+    subgraph SPI_Pattern["2. Clean SPI Architecture: Swappable Plugin Modules"]
+        Core2["Core Pipeline Engine\nlakehouse-iceberg\nZero Cloud SDK Imports"]
+        SPI["IcebergCatalogProvider\nSPI Contract · java.util.ServiceLoader\nOpen / Closed Boundary"]
+        PluginAWS[["lakehouse-iceberg-aws.jar\nProvides AWS / MinIO Catalog\nIsolated Runtime Classpath"]]
+        PluginGCP[["lakehouse-iceberg-gcp.jar\nProvides BigLake Catalog\nIsolated Runtime Classpath"]]
     end
+
+    Core1 -->|"Direct call"| HardcodedSwitch
+    HardcodedSwitch -.->|"Compile-time import"| AWS_SDK
+    HardcodedSwitch -.->|"Compile-time import"| GCP_SDK
+    HardcodedSwitch -.->|"Compile-time import"| Azure_SDK
+
+    Core2 ==>|"Discovers via ServiceLoader"| SPI
+    SPI -.->|"Runtime META-INF/services"| PluginAWS
+    SPI -.->|"Runtime META-INF/services"| PluginGCP
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef service fill:#18181B,stroke:#7C3AED,stroke-width:1.5px,color:#F4F4F5
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class Core2,SPI core
+    class PluginAWS,PluginGCP service
+    class Core1,AWS_SDK,GCP_SDK,Azure_SDK external
+    class HardcodedSwitch guard
+    style Monolith fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style SPI_Pattern fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
 ```
 
 ### The USB Plug-and-Play Analogy
@@ -99,6 +121,7 @@ lakehouse-parent/
 A production SPI system consists of four strictly separated components across distinct Maven modules.
 
 ```mermaid
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "actorBkg": "#18181B", "actorBorder": "#7C3AED", "actorTextColor": "#F4F4F5", "actorLineColor": "#52525B", "signalColor": "#A855F7", "signalTextColor": "#E4E4E7", "labelBoxBkgColor": "#2E1065", "labelBoxBorderColor": "#A855F7", "labelTextColor": "#F5F3FF", "loopTextColor": "#D8B4FE", "noteBkgColor": "#1E1B2E", "noteBorderColor": "#6D28D9", "noteTextColor": "#EDE9FE", "activationBkgColor": "#4C1D95", "activationBorderColor": "#C084FC", "sequenceNumberColor": "#FAF5FF", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}}}%%
 sequenceDiagram
     autonumber
     participant App as Ingestion Application
@@ -107,16 +130,23 @@ sequenceDiagram
     participant META as META-INF/services/
     participant Provider as AwsRestCatalogProvider (Plugin JAR)
 
-    App->>Factory: getCatalog("aws_rest", configMap)
-    Factory->>Loader: ServiceLoader.load(IcebergCatalogProvider.class)
-    Loader->>META: Scan classpath for "META-INF/services/x.ruiz...IcebergCatalogProvider"
-    META-->>Loader: Return provider classnames: ["x.ruiz...AwsRestCatalogProvider"]
-    Loader->>Provider: Instantiate via public no-arg constructor
-    Provider-->>Loader: Instance reference
-    Loader-->>Factory: Stream / Iterator of provider instances
+    App->>+Factory: getCatalog("aws_rest", configMap)
+    Factory->>+Loader: ServiceLoader.load(IcebergCatalogProvider.class)
+    Loader->>+META: Scan classpath for "META-INF/services/x.ruiz...IcebergCatalogProvider"
+    META-->>-Loader: Provider classnames ["x.ruiz...AwsRestCatalogProvider"]
+    Loader->>+Provider: Instantiate via public no-arg constructor
+    Provider-->>-Loader: Instance reference
+    Loader-->>-Factory: Stream / Iterator of provider instances
+    Note over Factory: Cache into unmodifiable Map (fail fast on duplicate keys)
     Factory->>Factory: Match provider.backendType() == "aws_rest"
-    Factory->>Provider: provider.loadCatalog(configMap)
-    Provider-->>App: Initialized org.apache.iceberg.catalog.Catalog
+
+    alt Provider registered on classpath
+        Factory->>+Provider: provider.loadCatalog(configMap)
+        Provider-->>-App: Initialized org.apache.iceberg.catalog.Catalog
+    else Plugin JAR missing from classpath
+        Factory-->>App: IllegalArgumentException (lists discovered REGISTRY.keySet())
+    end
+    deactivate Factory
 ```
 
 ### 1. The Service Interface (Core Module)

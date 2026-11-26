@@ -19,24 +19,41 @@ The **Streamable HTTP Transport** is the modern, unified networking specificatio
 Earlier remote transports separated connection initiation (`GET /sse`) from message dispatch (`POST /messages?sessionId=...`), introducing stateful sticky-session requirements. Streamable HTTP consolidates all protocol interactions onto a single URL, permitting clients and servers to negotiate execution mode based on HTTP semantics.
 
 ```mermaid
-flowchart TD
-    subgraph Client["MCP Host Client"]
-        Dispatcher["Protocol Dispatcher"]
+%%{init: {"theme": "base", "themeCSS": "svg { background-color: #09090B !important; border-radius: 8px; }", "themeVariables": {"darkMode": true, "background": "#09090B", "mainBkg": "#18181B", "textColor": "#F4F4F5", "primaryColor": "#18181B", "primaryTextColor": "#F4F4F5", "primaryBorderColor": "#7C3AED", "lineColor": "#A855F7", "secondaryColor": "#16141F", "tertiaryColor": "#0F0F14", "edgeLabelBackground": "#18181B", "clusterBkg": "#0F0F14", "clusterBorder": "#52525B", "titleColor": "#D8B4FE", "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif", "fontSize": "13px"}, "flowchart": {"curve": "basis", "nodeSpacing": 42, "rankSpacing": 56, "padding": 14}}}%%
+flowchart TB
+    subgraph Client["1. MCP Host Client (Remote or Localhost)"]
+        Dispatcher["Protocol Dispatcher\nStandard HTTP Client\nNegotiates POST vs SSE"]
     end
 
-    subgraph Gateway["L7 Ingress / Reverse Proxy (No Sticky Sessions Needed)"]
-        Router["Path: /mcp"]
+    subgraph Gateway["2. L7 Ingress / Reverse Proxy"]
+        Router["Unified Endpoint: /mcp\nStateless L7 Round-Robin\nNo sticky sessions needed"]
     end
 
-    subgraph Server["MCP Streamable HTTP Server"]
-        StatelessHandler["1. Stateless Mode (POST /mcp)\nSynchronous Request -> Response"]
-        StreamingHandler["2. Streaming Mode (GET /mcp)\nOptional SSE Upgrade for Live Notifications"]
+    subgraph Server["3. MCP Streamable HTTP Server (K8s · Cloud Run · Docker)"]
+        StatelessHandler["1. Stateless Mode · POST /mcp\nSynchronous Request -> Response\nServerless & auto-scale native"]
+        StreamingHandler["2. Streaming Mode · GET /mcp\nOptional SSE Upgrade\nLive notifications & progress"]
     end
 
-    Dispatcher -->|"POST /mcp (JSON-RPC Call)"| Router --> StatelessHandler
-    StatelessHandler -->|"HTTP 200 (JSON-RPC Result Body)"| Dispatcher
-    Dispatcher -.->|"Optional GET /mcp (text/event-stream)"| Router -.-> StreamingHandler
+    Dispatcher ==>|"POST /mcp · JSON-RPC Call"| Router
+    Router ==>|"Stateless L7 route"| StatelessHandler
+    StatelessHandler ==>|"HTTP 200 · JSON-RPC Result Body"| Dispatcher
+    Dispatcher -.->|"Optional GET /mcp · text/event-stream"| Router
+    Router -.->|"Upgrade SSE stream"| StreamingHandler
     StreamingHandler -.->|"Push Notifications & Progress"| Dispatcher
+
+    classDef core fill:#2E1065,stroke:#A855F7,stroke-width:2px,color:#F5F3FF
+    classDef external fill:#27272A,stroke:#71717A,stroke-width:1.5px,color:#E4E4E7
+    classDef async fill:#1E1B2E,stroke:#6B7280,stroke-width:1.25px,stroke-dasharray:4 3,color:#D4D4D8
+    classDef guard fill:#3B0764,stroke:#E879F9,stroke-width:2px,stroke-dasharray:5 3,color:#FAF5FF
+
+    class StatelessHandler core
+    class Dispatcher external
+    class Router guard
+    class StreamingHandler async
+
+    style Client fill:#18181B,stroke:#52525B,stroke-width:1.25px,stroke-dasharray:5 4,color:#A1A1AA
+    style Gateway fill:#16141F,stroke:#6D28D9,stroke-width:1.25px,stroke-dasharray:4 3,color:#C4B5FD
+    style Server fill:#0F0F14,stroke:#52525B,stroke-width:1.5px,color:#D8B4FE
 ```
 
 ### Dual Execution Modes
