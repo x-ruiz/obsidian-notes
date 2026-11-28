@@ -281,6 +281,23 @@ Apply four concrete splitting heuristics when chunking a larger project:
 3. **The "And" Smell Test:** If a spec title requires two or more commas or `&` conjunctions, it almost certainly glues multiple specs together.
 4. **Independent Verification Gate:** Slice at the smallest vertical boundary where `mvn test`, `pytest`, or `tofu test` verifies the deliverable end-to-end before starting the next spec.
 
+### Spec-Level vs. Code-Level Boundaries (Spec Altitude)
+
+The fastest way to make SDD feel tedious is putting **code-level wiring** inside a specification. Apply the **Black-Box Boundary Rule**: anything observable *across* a module, API, security, or operational boundary belongs in the **Spec**; anything strictly *inside* the implementation belongs in **Code**.
+
+| Engineering Concern | Spec-Level (Belongs in the Spec) | Code-Level (Keep in Code — Edit Directly) | Senior Note |
+| :--- | :--- | :--- | :--- |
+| **Ownership & Architecture** | Resource ownership rules, ADRs, Non-Goals, module/stack dependency direction, and release-tag boundaries | Splitting code across `main.tf` / `iam.tf`, helper file layouts, or internal package sub-structures | Lock *who owns what*, not how internal files are sliced. |
+| **Interfaces & Contracts** | Public types/methods, module inputs & outputs, REST/event payloads, and external manifest schemas (`domain.yaml`, `table.yaml`) | Package-private helper signatures (e.g., `resolveProperties`), internal DTOs, HCL `local.*` variable names, and literal `coalesce(try(...))` expressions | Describe behavioral derivation rules in prose, not language syntax. |
+| **Tooling & Wiring** | Behavioral contracts (*"uat/prod pin immutable tags; API quota bills to env project"*) and major tool choices (*"Terragrunt wrappers"*) | Moving a value from `.tf` to Terragrunt `inputs`, `for_each` / `depends_on` wiring, shell `git config` one-liners, and third-party GitHub Action internals | Changing *how* config flows beneath the same contract needs zero spec edits. |
+| **Security, Cost & Failure Modes** | Least-privilege IAM scopes, `$0/mo` idle baseline, `PREVENT` deletion policies, failure modes, and typed error/exception contracts | Exact firewall priority integers (`65534`), log/comment truncation limits (`60,000` chars), one-time `moved {}` migration shims, and formatting tweaks | One-time migration shims cause spec drift the moment they are deleted. |
+| **Verification (`TC-*`)** | Observable happy-path, idempotency, negative validation, and security boundary assertions | Mock library wiring, test fixture helper methods, and assertion syntax | Tests prove the contract; how tests are structured is code-level. |
+
+#### The 3-Second "Edit Directly vs. Update Spec" Test
+Before touching a spec for a small change, ask: ***Would a downstream consumer, security auditor, or `TC-*` acceptance case notice this change?***
+- **No** (e.g., moving a literal from `.tf` into Terragrunt `inputs`, refactoring `locals`, renaming a private helper) → **Code-level.** Make the edit directly and leave the spec untouched.
+- **Yes** (e.g., changing a module input/output, relaxing an IAM/WIF rule, enabling a billable default, or reversing a Non-Goal like adopting Terragrunt) → **Spec-level.** Update the spec (beforehand for architectural pivots, or via diff-reconciliation right after for minor refinements).
+
 ### Example 1: Invariant Core Spec Template
 
 Every feature—from a minor service change (1-page mini-spec) to a major subsystem—starts from the same core skeleton:
